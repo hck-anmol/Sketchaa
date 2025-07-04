@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+@import "tailwindcss";
+
+
+
+
+@keyframes bounceCustom {
+  from {
+    transform: translateY(0px);
+  }
+
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes rotateCustom {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-bounce-custom {
+  animation: bounceCustom 1s ease-in-out infinite alternate;
+}
+
+.animate-rotate-custom {
+  animation: rotateCustom 3s linear infinite;
+}
+
+
+@keyframes twinkle {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.animation twinkle {
+  animation: 3s infinite alternate
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+button:hover {
+  cursor: pointer;
+}
