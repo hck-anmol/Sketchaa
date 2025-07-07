@@ -558,7 +558,7 @@ const Room = () => {
                         >
                             <Users size={16} className="sm:w-5 sm:h-5" />
                             <span className="text-xs sm:text-base">{players.length}</span>
-                        </button>
+                        </button>   
 
                         <button
                             onClick={() => setShowChat(!showChat)}
@@ -739,7 +739,6 @@ const Room = () => {
                                 <img src={player.character} alt="" className='rounded-full w-8 h-8 sm:w-10 sm:h-10' />
                                 <div className="flex-1">
                                     <div className="text-white font-medium flex items-center gap-2">
-                                        {player.playerName}
                                         {player.playerName}
                                         {player.isHost && (
                                             <Crown size={16} className="text-yellow-400" />
