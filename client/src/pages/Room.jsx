@@ -8,6 +8,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { drawingwords } from '../assets/assets';
 import socket from '../socket';
 import toast from 'react-hot-toast';
+import { characterData, aboutImg } from '../assets/assets';
+
 
 const Room = () => {
     const { id: roomCode } = useParams();
@@ -35,6 +37,8 @@ const Room = () => {
     const [showPlayers, setShowPlayers] = useState(false);
     const [brushSize, setBrushSize] = useState(5);
     const [brushColor, setBrushColor] = useState('#000000');
+    const [drawingSubmitted, setDrawingSubmitted] = useState(false);
+    const [isSubmittingDrawing, setIsSubmittingDrawing] = useState(false);
 
     const canvasContainerRef = useRef(null);
     const canvasRef = useRef(null);
@@ -42,9 +46,7 @@ const Room = () => {
     const chatInputRef = useRef(null);
     const navigate = useNavigate();
 
-
     const getCharacterImage = (character) => {
-
         const characterImages = {
             'char1': 'character3.png',
             'char2': 'character5.png',
@@ -57,6 +59,117 @@ const Room = () => {
         return characterImages[character] || null;
     };
 
+    const handleSubmitDrawing = () => {
+        if (!currentPlayer || !canvasRef.current) {
+            toast.error('Unable to submit drawing - missing required components');
+            return;
+        }
+
+        if (drawingSubmitted) {
+            return;
+        }
+
+        if (isSubmittingDrawing) {
+            return;
+        }
+
+        if (!gameState.isStarted) {
+            toast.error('Game must be started to submit drawing');
+            return;
+        }
+
+        setIsSubmittingDrawing(true);
+
+        try {
+            const image = canvasRef.current.getCanvasDataUrl();
+            const characterImage = getCharacterImage(currentPlayer.character);
+
+            socket.emit('submit-drawing', {
+                roomCode,
+                playerId: currentPlayer.id,
+                playerName: currentPlayer.name,
+                character: characterImage,
+                image,
+            });
+
+            setTimeout(() => {
+                if (isSubmittingDrawing) {
+                    setIsSubmittingDrawing(false);
+                }
+            }, 10000);
+
+        } catch (error) {
+            setIsSubmittingDrawing(false);
+            toast.error('Failed to submit drawing: ' + error.message);
+        }
+    };
+
+    useEffect(() => {
+        if (gameState.isStarted && time <= 0 && !drawingSubmitted) {
+            handleSubmitDrawing();
+        }
+    }, [time, gameState.isStarted, drawingSubmitted]);
+
+    useEffect(() => {
+        let intervalId;
+
+        if (gameState.isStarted && !drawingSubmitted) {
+            intervalId = setInterval(() => {
+                if (time <= 3 && time > 0) {
+                    handleSubmitDrawing();
+                }
+            }, 1000);
+        }
+
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
+    }, [gameState.isStarted, drawingSubmitted, time]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (gameState.isStarted && !drawingSubmitted && canvasRef.current) {
+                try {
+                    const image = canvasRef.current.getCanvasDataUrl();
+                    const characterImage = getCharacterImage(currentPlayer?.character);
+
+                    socket.emit('submit-drawing', {
+                        roomCode,
+                        playerId: currentPlayer?.id,
+                        playerName: currentPlayer?.name,
+                        character: characterImage,
+                        image,
+                    });
+                } catch (error) {
+                }
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [gameState.isStarted, drawingSubmitted, roomCode, currentPlayer]);
+
+    useEffect(() => {
+        return () => {
+            if (gameState.isStarted && !drawingSubmitted && canvasRef.current) {
+                try {
+                    const image = canvasRef.current.getCanvasDataUrl();
+                    const characterImage = getCharacterImage(currentPlayer?.character);
+
+                    socket.emit('submit-drawing', {
+                        roomCode,
+                        playerId: currentPlayer?.id,
+                        playerName: currentPlayer?.name,
+                        character: characterImage,
+                        image,
+                    });
+                } catch (error) {
+                }
+            }
+        };
+    }, [gameState.isStarted, drawingSubmitted, roomCode, currentPlayer]);
 
     useEffect(() => {
         const updateSize = () => {
@@ -104,9 +217,7 @@ const Room = () => {
             setTime(storedGameState.remainingTime);
         }
 
-
         updateSize();
-
         window.addEventListener('resize', updateSize);
 
         const resizeObserver = new ResizeObserver(updateSize);
@@ -115,7 +226,6 @@ const Room = () => {
         }
 
         const handleConnect = () => {
-            console.log('Socket connected:', socket.id);
             setIsConnected(true);
             setConnectionStatus('Connected');
 
@@ -125,13 +235,11 @@ const Room = () => {
         };
 
         const handleDisconnect = () => {
-            console.log('Socket disconnected');
             setIsConnected(false);
             setConnectionStatus('Reconnecting...');
         };
 
         const handlePlayersUpdated = (playersData) => {
-            console.log('Players updated:', playersData);
             if (playersData && Array.isArray(playersData)) {
                 setPlayers(playersData);
                 localStorage.setItem('playersInRoom', JSON.stringify(playersData));
@@ -146,7 +254,6 @@ const Room = () => {
         };
 
         const handleWordUpdated = (newWord) => {
-            console.log('Word updated:', newWord);
             setSelectedWord(newWord);
             localStorage.setItem("selectedWord", newWord);
             setIsWordChanging(false);
@@ -154,7 +261,6 @@ const Room = () => {
         };
 
         const handleNewMessage = (message) => {
-            console.log('New message received:', message);
             setChatMessages(prev => {
                 const updated = [...prev, message];
                 localStorage.setItem('chatMessages', JSON.stringify(updated));
@@ -163,7 +269,6 @@ const Room = () => {
         };
 
         const handleGameStateUpdated = (newGameState) => {
-            console.log('Game state updated:', newGameState);
             setGameState(newGameState);
             localStorage.setItem('gameState', JSON.stringify(newGameState));
             if (newGameState.isStarted) {
@@ -172,7 +277,6 @@ const Room = () => {
         };
 
         const handleGameStarted = ({ startTime, duration }) => {
-            console.log('Game started:', { startTime, duration });
             setGameState(prev => ({
                 ...prev,
                 isStarted: true,
@@ -182,6 +286,7 @@ const Room = () => {
             }));
             setTime(duration);
             setIsStartingGame(false);
+            setDrawingSubmitted(false);
             toast.success('Game started! Start drawing!');
         };
 
@@ -193,8 +298,17 @@ const Room = () => {
             }));
         };
 
+        const handleRequestFinalDrawing = () => {
+            if (canvasRef.current && !drawingSubmitted && gameState.isStarted) {
+                handleSubmitDrawing();
+            } 
+        };
+
         const handleGameEnded = () => {
-            console.log('Game ended');
+            if (gameState.isStarted && !drawingSubmitted) {
+                handleSubmitDrawing();
+            }
+
             setGameState(prev => ({
                 ...prev,
                 isStarted: false,
@@ -203,16 +317,25 @@ const Room = () => {
             }));
             setTime(60);
 
-            // Check if currentPlayer exists before submitting drawing
-            if (currentPlayer && canvasRef.current) {
-                handleSubmitDrawing();
+            if (!drawingSubmitted) {
+                toast.success('Game ended! Your drawing has been submitted automatically.');
+            } else {
+                toast.success('Game ended! Waiting for results...');
             }
+            navigate(`/room/${roomCode}/judge`)
+        };
 
-            toast.success('Game ended! Time to see the results!');
+        const handleDrawingSubmitted = ({ success }) => {
+            if (success) {
+                setDrawingSubmitted(true);
+                setIsSubmittingDrawing(false);
+            } else {
+                setIsSubmittingDrawing(false);
+                toast.error('Failed to submit drawing');
+            }
         };
 
         const handleRoomRejoined = ({ roomCode, players, selectedWord, chatMessages, gameState }) => {
-            console.log('Room rejoined successfully:', roomCode);
             setPlayers(players);
             setSelectedWord(selectedWord);
             setChatMessages(chatMessages || []);
@@ -224,21 +347,23 @@ const Room = () => {
             localStorage.setItem('gameState', JSON.stringify(gameState));
             setConnectionStatus(`Connected - ${players.length} players`);
 
-            // Update host status
             const currentPlayerId = localStorage.getItem("currentPlayerId");
             const rejoiningPlayer = players.find(p => p.playerId === currentPlayerId);
             if (rejoiningPlayer) {
                 setIsHost(rejoiningPlayer.isHost);
             }
-
-            toast.success('Rejoined room successfully!');
         };
 
         const handleRoomError = (message) => {
-            console.error('Room error:', message);
             toast.error(message);
             setIsStartingGame(false);
             setIsWordChanging(false);
+            setIsSubmittingDrawing(false);
+        };
+
+        const handleGameResults = (results) => {
+            sessionStorage.setItem('leaderboardData', JSON.stringify(results));
+            navigate(`/room/${roomCode}/judge`);
         };
 
         // Set up socket listeners
@@ -250,11 +375,16 @@ const Room = () => {
         socket.on('game-state-updated', handleGameStateUpdated);
         socket.on('game-started', handleGameStarted);
         socket.on('time-update', handleTimeUpdate);
+        socket.on('request-final-drawing', handleRequestFinalDrawing);
         socket.on('game-ended', handleGameEnded);
+        socket.on('drawing-submitted', handleDrawingSubmitted);
         socket.on('room-rejoined', handleRoomRejoined);
         socket.on('room-error', handleRoomError);
+        socket.on('game-results', handleGameResults);
+        socket.on('drawing-phase-ended', () => {
+            navigate(`/room/${roomCode}/judge`);
+        });
 
-        // Initial connection check
         if (socket.connected) {
             handleConnect();
         }
@@ -268,22 +398,24 @@ const Room = () => {
             socket.off('game-state-updated', handleGameStateUpdated);
             socket.off('game-started', handleGameStarted);
             socket.off('time-update', handleTimeUpdate);
+            socket.off('request-final-drawing', handleRequestFinalDrawing);
             socket.off('game-ended', handleGameEnded);
+            socket.off('drawing-submitted', handleDrawingSubmitted);
             socket.off('room-rejoined', handleRoomRejoined);
             socket.off('room-error', handleRoomError);
+            socket.off('game-results', handleGameResults);
+            socket.off('drawing-phase-ended');
             window.removeEventListener('resize', updateSize);
             resizeObserver.disconnect();
         };
     }, [roomCode, navigate]);
 
-    // Auto-scroll chat to bottom
     useEffect(() => {
         if (chatEndRef.current) {
             chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [chatMessages]);
 
-    // Handle game start
     const handleStartGame = () => {
         if (!isHost) {
             toast.error("Only the host can start the game");
@@ -294,6 +426,9 @@ const Room = () => {
             toast.error("Game has already started");
             return;
         }
+        sessionStorage.removeItem('leaderboardData');
+        localStorage.removeItem('chatMessages');
+        localStorage.removeItem('gameState');
 
         setIsStartingGame(true);
         socket.emit('start-game', {
@@ -302,7 +437,6 @@ const Room = () => {
         });
     };
 
-    // Handle word change
     const handleWordChange = () => {
         if (!isHost) {
             toast.error("Only the host can change the word");
@@ -320,7 +454,6 @@ const Room = () => {
         });
     };
 
-    // Handle chat message send
     const handleSendMessage = () => {
         if (!newMessage.trim()) return;
 
@@ -333,7 +466,6 @@ const Room = () => {
         setNewMessage('');
     };
 
-    // Handle enter key in chat
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -341,21 +473,18 @@ const Room = () => {
         }
     };
 
-    // Format time display
     const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
-    // Handle canvas clear
     const handleClearCanvas = () => {
         if (canvasRef.current) {
             canvasRef.current.clearCanvas();
         }
     };
 
-    // Leave room
     const handleLeaveRoom = () => {
         localStorage.removeItem('currentRoomCode');
         localStorage.removeItem('currentPlayerId');
@@ -363,50 +492,24 @@ const Room = () => {
         localStorage.removeItem('selectedWord');
         localStorage.removeItem('chatMessages');
         localStorage.removeItem('gameState');
+        sessionStorage.removeItem('leaderboardData');
         navigate('/room');
     };
 
-    const handleSubmitDrawing = () => {
-        if (canvasRef.current && currentPlayer) {
-            const image = canvasRef.current.getCanvasDataUrl();
-            const characterImage = getCharacterImage(currentPlayer.character);
-            socket.emit('submit-drawing', {
-                roomCode,
-                playerId: currentPlayer.id,
-                playerName: currentPlayer.name,
-                character: characterImage,
-                image,
-            });
-        }
-    };
-
-    useEffect(() => {
-        socket.on('game-results', (results) => {
-            console.log('Received game results:', results); // Add this line
-            sessionStorage.setItem('leaderboardData', JSON.stringify(results));
-            navigate(`/room/${roomCode}/leaderboard`);
-        });
-    }, []);
-
-    const PlayerAvatar = ({ player, size = 'w-8 h-8' }) => {
-        const characterImage = getCharacterImage(player.character);
-
-        if (characterImage) {
-            return (
-                <img
-                    src={characterImage}
-                    alt={player.playerName}
-                    className={`${size} rounded-full object-cover`}
-                />
-            );
+    const handleManualSubmit = () => {
+        if (!gameState.isStarted) {
+            toast.error("Game must be started to submit drawing");
+            return;
         }
 
-        return (
-            <div className={`${size} rounded-full bg-blue-500 flex items-center justify-center text-white font-bold`}>
-                {player.playerName.charAt(0).toUpperCase()}
-            </div>
-        );
+        if (drawingSubmitted) {
+            toast.info("Drawing already submitted");
+            return;
+        }
+
+        handleSubmitDrawing();
     };
+
 
     if (!currentPlayer) {
         return (
@@ -418,14 +521,11 @@ const Room = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 relative overflow-hidden">
-            {/* Background */}
             <div className="fixed inset-0 -z-10">
                 <Background />
             </div>
 
-            {/* Main Content */}
             <div className="relative z-10 h-screen flex flex-col">
-                {/* Header */}
                 <div className="bg-black/60 backdrop-blur-sm p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
@@ -439,7 +539,6 @@ const Room = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Timer */}
                         <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${gameState.isStarted ? 'bg-red-600' : 'bg-blue-600'
                             }`}>
                             <Clock size={20} className="text-white" />
@@ -448,7 +547,13 @@ const Room = () => {
                             </span>
                         </div>
 
-                        {/* Players Button */}
+                        {gameState.isStarted && (
+                            <div className={`px-3 py-1 rounded-lg text-sm font-bold ${drawingSubmitted ? 'bg-green-600' : 'bg-orange-600'
+                                }`}>
+                                {drawingSubmitted ? '✓ Submitted' : 'Drawing...'}
+                            </div>
+                        )}
+
                         <button
                             onClick={() => setShowPlayers(!showPlayers)}
                             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
@@ -457,7 +562,6 @@ const Room = () => {
                             <span>{players.length}</span>
                         </button>
 
-                        {/* Chat Button */}
                         <button
                             onClick={() => setShowChat(!showChat)}
                             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -466,7 +570,6 @@ const Room = () => {
                             <span>Chat</span>
                         </button>
 
-                        {/* Leave Button */}
                         <button
                             onClick={handleLeaveRoom}
                             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -476,11 +579,8 @@ const Room = () => {
                     </div>
                 </div>
 
-                {/* Game Content */}
-                <div className="flex-1 flex">
-                    {/* Left Panel - Word and Controls */}
-                    <div className="w-80 bg-black/40 backdrop-blur-sm p-4 flex flex-col gap-4">
-                        {/* Word Section */}
+                <div className="flex-1 flex overflow-y-scroll no-scrollbar">
+                    <div className="w-80 bg-black/40 backdrop-blur-sm p-4 flex flex-col gap-4 overflow-y-scroll no-scrollbar">
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                             <h3 className="text-white font-bold mb-2">Word to Draw:</h3>
                             <div className="text-2xl font-bold text-yellow-400 mb-4">
@@ -500,7 +600,6 @@ const Room = () => {
                             )}
                         </div>
 
-                        {/* Game Controls */}
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                             <h3 className="text-white font-bold mb-4">Game Controls:</h3>
 
@@ -519,9 +618,25 @@ const Room = () => {
                             )}
 
                             {gameState.isStarted && (
-                                <div className="text-center">
-                                    <div className="text-green-400 font-bold mb-2">Game in Progress!</div>
-                                    <div className="text-white text-sm">Draw the word above</div>
+                                <div className="space-y-2">
+                                    <div className="text-center">
+                                        <div className="text-green-400 font-bold mb-2">Game in Progress!</div>
+                                        <div className="text-white text-sm">Draw the word above</div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleManualSubmit}
+                                        disabled={drawingSubmitted || isSubmittingDrawing}
+                                        className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${drawingSubmitted
+                                            ? 'bg-green-600 cursor-not-allowed'
+                                            : isSubmittingDrawing
+                                                ? 'bg-gray-600 cursor-not-allowed'
+                                                : 'bg-blue-600 hover:bg-blue-700'
+                                            } text-white font-bold`}
+                                    >
+                                        <Send size={16} />
+                                        {drawingSubmitted ? 'Submitted' : isSubmittingDrawing ? 'Submitting...' : 'Submit Drawing'}
+                                    </button>
                                 </div>
                             )}
 
@@ -532,7 +647,6 @@ const Room = () => {
                             )}
                         </div>
 
-                        {/* Drawing Tools */}
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                             <h3 className="text-white font-bold mb-4">Drawing Tools:</h3>
 
@@ -587,7 +701,6 @@ const Room = () => {
                         </div>
                     </div>
 
-                    {/* Center - Drawing Canvas */}
                     <div className="flex-1 p-4">
                         <div
                             ref={canvasContainerRef}
@@ -607,7 +720,6 @@ const Room = () => {
                 </div>
             </div>
 
-            {/* Players Panel */}
             {showPlayers && (
                 <div className="fixed top-0 right-0 h-full w-80 bg-black/80 backdrop-blur-sm p-4 z-50 overflow-y-auto">
                     <div className="flex items-center justify-between mb-4">
@@ -626,7 +738,7 @@ const Room = () => {
                                 key={player.playerId}
                                 className="bg-white/10 backdrop-blur-sm rounded-lg p-3 flex items-center gap-3"
                             >
-                                <PlayerAvatar player={player} />
+                                <img src={player.character} alt="" className='rounded-full w-10 h-10' />
                                 <div className="flex-1">
                                     <div className="text-white font-medium flex items-center gap-2">
                                         {player.playerName}
@@ -642,7 +754,6 @@ const Room = () => {
                 </div>
             )}
 
-            {/* Chat Panel */}
             {showChat && (
                 <div className="fixed bottom-0 right-0 h-96 w-80 bg-black/80 backdrop-blur-sm flex flex-col z-50">
                     <div className="flex items-center justify-between p-4 border-b border-gray-600">
@@ -659,7 +770,7 @@ const Room = () => {
                         {chatMessages.map((msg) => (
                             <div key={msg.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <PlayerAvatar player={msg} size="w-6 h-6" />
+                                    <img src={msg.character} alt="" className='rounded-full w-7 h-7' />
                                     <span className="text-white font-medium text-sm">{msg.playerName}</span>
                                 </div>
                                 <div className="text-gray-300 text-sm break-words">

@@ -69,7 +69,6 @@ const HomePage = () => {
     const generatePlayerId = () => {
         const newId = ((Math.floor(100000000 + Math.random() * 900000000)).toString());
         setplayerId(newId);
-        console.log(newId);
         return newId;
     };
 
@@ -127,9 +126,7 @@ const HomePage = () => {
                         <div className="bg-gray-700/80 rounded-lg p-6 flex flex-col items-start shadow">
                             <h2 className="text-xl font-semibold mb-3 text-primary">About</h2>
                             <p className="text-sm leading-relaxed">
-                                Sketchaa is a fun multiplayer drawing and AI-powered recognition game.<br />
-                                Each round, players draw a given word, and an AI model analyzes the drawings to determine which one is the most accurate match.<br />
-                                The AI model then announces the winner based on the most accurate drawing!
+                                Sketchaa is a fast-paced multiplayer drawing game where players draw a random word and then rate each other's artwork anonymously. After voting, scores are revealed and the leaderboard ranks the players. The winner is chosen entirely by fair player votes!
                             </p>
                         </div>
 

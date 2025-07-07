@@ -6,7 +6,7 @@ import Game from './pages/Game'
 import RoomPage from './pages/RoomPage'
 import Room from './pages/Room'
 import LeaderBoard from './pages/LeaderBoard'
-// Remove: import { Router } from 'express'
+import JudgePage from './pages/Judge'
 
 function App() {
   return (
@@ -17,7 +17,8 @@ function App() {
         <Route path='/game/:id' element={<Game />} />
         <Route path='/room' element={<RoomPage />} />
         <Route path='/room/:id' element={<Room />} />
-        <Route path='/room/:id/leaderboard' element={<LeaderBoard />} />
+        <Route path='/room/:id/results' element={<LeaderBoard />} />
+        <Route path='/room/:id/judge' element={<JudgePage />} />
       </Routes>
     </div>
   )

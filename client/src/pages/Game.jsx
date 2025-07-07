@@ -54,12 +54,10 @@ const PracticePage = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 relative overflow-hidden">
-            {/* Background */}
             <div className="fixed inset-0 ">
                 <Background />
             </div>
 
-            {/* Header */}
             <div className="bg-black/60 backdrop-blur-sm p-4 flex items-center justify-between z-20">
                 <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
                     <Sketchaa />
@@ -70,9 +68,7 @@ const PracticePage = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
             <div className="flex flex-col md:flex-row h-[calc(100vh-64px)]">
-                {/* Left Panel - Drawing Tools */}
                 <div className="w-full md:w-80 bg-black/40 backdrop-blur-sm p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-1 bg-white/10 backdrop-blur-sm rounded-lg p-4">
                         <div className='flex gap-2'>
@@ -136,10 +132,8 @@ const PracticePage = () => {
                             Clear Canvas
                         </button>
                     </div>
-                    <button className='bg-amber-300 hover:bg-amber-400 text-amber-900 font-semibold rounded-lg flex items-center justify-center cursor-pointer py-2'>Submit</button>
                 </div>
 
-                {/* Center - Drawing Canvas */}
                 <div className="flex-1 p-4 flex justify-center items-center">
                     <div
                         ref={containerRef}

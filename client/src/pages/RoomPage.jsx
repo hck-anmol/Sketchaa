@@ -6,6 +6,8 @@ import Sketchaa from '../components/Sketchaa';
 import Logo from '../components/Logo';
 import { drawingwords } from '../assets/assets';
 import socket from '../socket';
+import { characterData, aboutImg } from '../assets/assets';
+
 
 const RoomPage = () => {
   const [roomCode, setRoomCode] = useState('');
@@ -24,9 +26,7 @@ const RoomPage = () => {
     }
 
     const setupSocketListeners = () => {
-      // Listen for successful room creation
       socket.on('room-created', ({ roomCode, players, selectedWord, gameState }) => {
-        console.log('Room created successfully:', roomCode, players);
         localStorage.setItem('playersInRoom', JSON.stringify(players));
         localStorage.setItem('selectedWord', selectedWord);
         localStorage.setItem('currentRoomCode', roomCode);
@@ -37,9 +37,7 @@ const RoomPage = () => {
         navigate(`/room/${roomCode}`);
       });
 
-      // Listen for successful room join
       socket.on('room-joined', ({ roomCode, players, selectedWord, chatMessages, gameState }) => {
-        console.log('Room joined successfully:', roomCode, players);
         localStorage.setItem('playersInRoom', JSON.stringify(players));
         localStorage.setItem('selectedWord', selectedWord);
         localStorage.setItem('currentRoomCode', roomCode);
@@ -51,7 +49,6 @@ const RoomPage = () => {
         navigate(`/room/${roomCode}`);
       });
 
-      // Listen for errors
       socket.on('room-error', (message) => {
         console.error('Room error:', message);
         toast.error(message);
@@ -59,7 +56,6 @@ const RoomPage = () => {
         setIsJoining(false);
       });
 
-      // Debug listener
       socket.on('debug-rooms-response', (rooms) => {
         console.log('All rooms:', rooms);
       });
@@ -95,11 +91,8 @@ const RoomPage = () => {
     const code = generateRoomCode();
     setRoomCode(code);
 
-    // Select random word
     const randomIndex = Math.floor(Math.random() * drawingwords.length);
     const word = drawingwords[randomIndex];
-
-    console.log('Creating room with code:', code);
 
     socket.emit('create-room', {
       roomCode: code,
@@ -174,8 +167,8 @@ const RoomPage = () => {
             <h6 className="text-[14px]">Create a new room or join an existing one to start drawing!</h6>
             <button
               className={`w-full py-1 rounded text-white cursor-pointer ${isCreating || !socket.connected
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               onClick={handleCreateRoom}
               disabled={isCreating || !socket.connected}
@@ -203,8 +196,8 @@ const RoomPage = () => {
             />
             <button
               className={`w-full py-1 rounded text-white cursor-pointer ${isJoining || !socket.connected
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               onClick={handleJoinRoom}
               disabled={isJoining || !socket.connected}
@@ -216,7 +209,7 @@ const RoomPage = () => {
           <div className="bg-[#e0e0e0] w-[33%] p-3 rounded-2xl flex flex-col gap-3">
             <h1 className="font-extrabold">Game Info</h1>
             <p className="text-[13px]">
-              Be quick!! You only have 60 sec to draw and then the AI-based judge will score your drawing and rank all your friends too. <br />
+              Be quick!! You only have 60 sec to draw, then everyone will rate each other's drawings anonymously. Scores will be revealed and the leaderboard will decide the winner.
               Enjoy :)
             </p>
           </div>

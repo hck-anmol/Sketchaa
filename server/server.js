@@ -18,27 +18,23 @@ app.use(express.json());
 
 const PORT = 5000;
 
-// In-memory storage for rooms
 const rooms = {};
+const roomDrawings = {};
+const roomScores = {};
 
 app.get('/', (req, res) => {
     res.send('Server is running...');
 });
 
 io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id);
-
-    // Create room
     socket.on('create-room', ({ roomCode, hostPlayer, selectedWord }) => {
         try {
             if (rooms[roomCode]) {
                 return socket.emit('room-error', 'Room code already exists');
             }
 
-            // Update socket ID for the host player
             hostPlayer.socketId = socket.id;
 
-            // Create new room
             rooms[roomCode] = {
                 roomCode,
                 players: [hostPlayer],
@@ -53,9 +49,10 @@ io.on('connection', (socket) => {
                 }
             };
 
-            socket.join(roomCode);
-            console.log(`Room created: ${roomCode} by ${hostPlayer.playerName}`);
+            roomDrawings[roomCode] = {};
+            roomScores[roomCode] = {};
 
+            socket.join(roomCode);
             socket.emit('room-created', {
                 roomCode,
                 players: rooms[roomCode].players,
@@ -63,48 +60,44 @@ io.on('connection', (socket) => {
                 gameState: rooms[roomCode].gameState
             });
 
-            // Broadcast to all clients in the room
             io.to(roomCode).emit('players-updated', rooms[roomCode].players);
             io.to(roomCode).emit('word-updated', rooms[roomCode].selectedWord);
             io.to(roomCode).emit('game-state-updated', rooms[roomCode].gameState);
-
         } catch (err) {
             console.error('Error creating room:', err);
             socket.emit('room-error', 'Error creating room');
         }
     });
 
-    // Join room
     socket.on('join-room', ({ roomCode, player }) => {
         try {
             if (!rooms[roomCode]) {
                 return socket.emit('room-error', 'Room does not exist');
             }
 
-            // Check if game has already started
             if (rooms[roomCode].gameState.isStarted) {
                 return socket.emit('room-error', 'Game has already started! Cannot join now.');
             }
 
-            // Update socket ID for the joining player
             player.socketId = socket.id;
 
-            // Check if player already exists in room (by playerId)
             const existingPlayerIndex = rooms[roomCode].players.findIndex(p => p.playerId === player.playerId);
-
             if (existingPlayerIndex !== -1) {
-                // Update existing player's socket ID
                 rooms[roomCode].players[existingPlayerIndex] = player;
-                console.log(`Player ${player.playerName} reconnected to room ${roomCode}`);
             } else {
-                // Add new player to room
                 rooms[roomCode].players.push(player);
-                console.log(`Player ${player.playerName} joined room ${roomCode}`);
+            }
+
+            if (!roomDrawings[roomCode]) {
+                roomDrawings[roomCode] = {};
+            }
+
+            if (!roomScores[roomCode]) {
+                roomScores[roomCode] = {};
             }
 
             socket.join(roomCode);
 
-            // Emit success to the joining player
             socket.emit('room-joined', {
                 roomCode,
                 players: rooms[roomCode].players,
@@ -113,20 +106,15 @@ io.on('connection', (socket) => {
                 gameState: rooms[roomCode].gameState
             });
 
-            // Broadcast updated player list to ALL clients in the room
             io.to(roomCode).emit('players-updated', rooms[roomCode].players);
             io.to(roomCode).emit('word-updated', rooms[roomCode].selectedWord);
             io.to(roomCode).emit('game-state-updated', rooms[roomCode].gameState);
-
-            console.log(`Current players in room ${roomCode}:`, rooms[roomCode].players.map(p => p.playerName));
-
         } catch (err) {
             console.error('Error joining room:', err);
             socket.emit('room-error', 'Error joining room');
         }
     });
 
-    // Rejoin room (for refresh handling)
     socket.on('rejoin-room', ({ roomCode, playerId }) => {
         try {
             if (!rooms[roomCode]) {
@@ -135,17 +123,14 @@ io.on('connection', (socket) => {
 
             const playerIndex = rooms[roomCode].players.findIndex(p => p.playerId === playerId);
             if (playerIndex !== -1) {
-                // Update socket ID for the rejoining player
                 rooms[roomCode].players[playerIndex].socketId = socket.id;
                 socket.join(roomCode);
 
-                // Calculate current remaining time if game is started
                 if (rooms[roomCode].gameState.isStarted && rooms[roomCode].gameState.startTime) {
                     const elapsed = Math.floor((Date.now() - rooms[roomCode].gameState.startTime) / 1000);
                     rooms[roomCode].gameState.remainingTime = Math.max(0, rooms[roomCode].gameState.duration - elapsed);
                 }
 
-                // Send current room state to rejoining player
                 socket.emit('room-rejoined', {
                     roomCode,
                     players: rooms[roomCode].players,
@@ -153,19 +138,15 @@ io.on('connection', (socket) => {
                     chatMessages: rooms[roomCode].chatMessages,
                     gameState: rooms[roomCode].gameState
                 });
-
-                console.log(`Player ${rooms[roomCode].players[playerIndex].playerName} rejoined room ${roomCode}`);
             } else {
                 socket.emit('room-error', 'Player not found in room');
             }
-
         } catch (err) {
             console.error('Error rejoining room:', err);
             socket.emit('room-error', 'Error rejoining room');
         }
     });
 
-    // Start game (host only)
     socket.on('start-game', ({ roomCode, playerId }) => {
         try {
             if (!rooms[roomCode]) {
@@ -181,12 +162,14 @@ io.on('connection', (socket) => {
                 return socket.emit('room-error', 'Game has already started');
             }
 
-            // Start the game
+            roomDrawings[roomCode] = {};
+            roomScores[roomCode] = {};
+
             rooms[roomCode].gameState.isStarted = true;
             rooms[roomCode].gameState.startTime = Date.now();
+            rooms[roomCode].gameState.duration = 60;
             rooms[roomCode].gameState.remainingTime = rooms[roomCode].gameState.duration;
 
-            // Broadcast game start to all players in the room
             io.to(roomCode).emit('game-started', {
                 startTime: rooms[roomCode].gameState.startTime,
                 duration: rooms[roomCode].gameState.duration
@@ -194,9 +177,6 @@ io.on('connection', (socket) => {
 
             io.to(roomCode).emit('game-state-updated', rooms[roomCode].gameState);
 
-            console.log(`Game started in room ${roomCode}`);
-
-            // Set up game timer
             const gameTimer = setInterval(() => {
                 if (!rooms[roomCode]) {
                     clearInterval(gameTimer);
@@ -206,26 +186,174 @@ io.on('connection', (socket) => {
                 const elapsed = Math.floor((Date.now() - rooms[roomCode].gameState.startTime) / 1000);
                 rooms[roomCode].gameState.remainingTime = Math.max(0, rooms[roomCode].gameState.duration - elapsed);
 
-                // Broadcast time update
                 io.to(roomCode).emit('time-update', rooms[roomCode].gameState.remainingTime);
 
-                // End game when time reaches 0
                 if (rooms[roomCode].gameState.remainingTime <= 0) {
                     clearInterval(gameTimer);
                     rooms[roomCode].gameState.isStarted = false;
-                    io.to(roomCode).emit('game-ended');
+
+                    io.to(roomCode).emit('request-final-drawing');
+
+                    io.to(roomCode).emit('drawing-phase-ended');
+
                     io.to(roomCode).emit('game-state-updated', rooms[roomCode].gameState);
-                    console.log(`Game ended in room ${roomCode}`);
                 }
             }, 1000);
-
         } catch (err) {
             console.error('Error starting game:', err);
             socket.emit('room-error', 'Error starting game');
         }
     });
 
-    // Change word (host only)
+    socket.on('submit-drawing', ({ roomCode, playerId, playerName, character, image }) => {
+        try {
+            if (!rooms[roomCode]) {
+                return socket.emit('room-error', 'Room does not exist');
+            }
+
+            if (!roomDrawings[roomCode]) {
+                roomDrawings[roomCode] = {};
+            }
+
+            roomDrawings[roomCode][playerId] = {
+                playerId,
+                playerName,
+                character,
+                image,
+                submittedAt: Date.now()
+            };
+
+            socket.emit('drawing-submitted', { success: true });
+        } catch (err) {
+            console.error('Error submitting drawing:', err);
+            socket.emit('room-error', 'Error submitting drawing');
+        }
+    });
+
+    socket.on('submit-score', ({ roomCode, scorerId, targetPlayerId, score }) => {
+        try {
+            if (!rooms[roomCode]) {
+                return socket.emit('score-error', 'Room does not exist');
+            }
+
+            if (!roomScores[roomCode]) {
+                roomScores[roomCode] = {};
+            }
+
+            if (scorerId === targetPlayerId) {
+                return socket.emit('score-error', 'Cannot score your own drawing');
+            }
+
+            if (score < 1 || score > 10) {
+                return socket.emit('score-error', 'Score must be between 1 and 10');
+            }
+
+            if (!roomScores[roomCode][targetPlayerId]) {
+                roomScores[roomCode][targetPlayerId] = [];
+            }
+
+            if (!rooms[roomCode].scoringTracker) {
+                rooms[roomCode].scoringTracker = {};
+            }
+
+            const scoringKey = `${scorerId}-${targetPlayerId}`;
+            if (rooms[roomCode].scoringTracker[scoringKey]) {
+                return socket.emit('score-error', 'You have already scored this drawing');
+            }
+
+            roomScores[roomCode][targetPlayerId].push(score);
+
+            rooms[roomCode].scoringTracker[scoringKey] = true;
+
+            const scores = roomScores[roomCode][targetPlayerId];
+            const totalScore = scores.reduce((sum, s) => sum + s, 0);
+            const totalVotes = scores.length;
+            const averageScore = totalVotes > 0 ? parseFloat((totalScore / totalVotes).toFixed(2)) : 0;
+
+            socket.emit('score-submitted', {
+                success: true,
+                targetPlayerId: targetPlayerId,
+                newTotalScore: totalScore,
+                newTotalVotes: totalVotes,
+                newAverageScore: averageScore
+            });
+
+            checkVotingComplete(roomCode);
+        } catch (err) {
+            console.error('Error submitting score:', err);
+            socket.emit('score-error', 'Error submitting score');
+        }
+    });
+
+    socket.on('get-scoring-history', ({ roomCode, playerId }) => {
+        try {
+            if (!rooms[roomCode]) {
+                return socket.emit('room-error', 'Room does not exist');
+            }
+
+            const scoredDrawings = [];
+            const scoringTracker = rooms[roomCode].scoringTracker || {};
+
+            for (const key in scoringTracker) {
+                if (scoringTracker[key]) {
+                    const [scorerId, targetPlayerId] = key.split('-');
+                    if (scorerId === playerId) {
+                        scoredDrawings.push(targetPlayerId);
+                    }
+                }
+            }
+
+            socket.emit('scoring-history', { scoredDrawings });
+        } catch (err) {
+            console.error('Error getting scoring history:', err);
+            socket.emit('room-error', 'Error getting scoring history');
+        }
+    });
+
+    socket.on('get-room-drawings', ({ roomCode }) => {
+        try {
+            if (!rooms[roomCode]) {
+                return socket.emit('room-error', 'Room does not exist');
+            }
+
+            const drawings = roomDrawings[roomCode] || {};
+            const players = rooms[roomCode].players;
+            const selectedWord = rooms[roomCode].selectedWord;
+            const scores = roomScores[roomCode] || {};
+
+            const results = players.map(player => {
+                const drawing = drawings[player.playerId];
+                const playerScores = scores[player.playerId] || [];
+                const totalScore = playerScores.reduce((sum, s) => sum + s, 0);
+                const totalVotes = playerScores.length;
+                const averageScore = totalVotes > 0 ? parseFloat((totalScore / totalVotes).toFixed(2)) : 0;
+
+                return {
+                    playerId: player.playerId,
+                    playerName: player.playerName,
+                    character: player.character,
+                    image: drawing ? drawing.image : null,
+                    hasSubmitted: !!drawing,
+                    totalScore,
+                    totalVotes,
+                    averageScore,
+                    scores: playerScores
+                };
+            });
+
+            io.to(roomCode).emit('room-drawings', {
+                roomCode,
+                results,
+                selectedWord,
+                totalPlayers: players.length,
+                submittedDrawings: Object.keys(drawings).length
+            });
+        } catch (err) {
+            console.error('Error getting room drawings:', err);
+            socket.emit('room-error', 'Error getting room drawings');
+        }
+    });
+
     socket.on('change-word', ({ roomCode, newWord, playerId }) => {
         try {
             if (!rooms[roomCode]) {
@@ -238,19 +366,13 @@ io.on('connection', (socket) => {
             }
 
             rooms[roomCode].selectedWord = newWord;
-
-            // Broadcast word change to all players in the room
             io.to(roomCode).emit('word-updated', newWord);
-
-            console.log(`Word changed in room ${roomCode} to: ${newWord}`);
-
         } catch (err) {
             console.error('Error changing word:', err);
             socket.emit('room-error', 'Error changing word');
         }
     });
 
-    // Send chat message
     socket.on('send-message', ({ roomCode, message, playerId }) => {
         try {
             if (!rooms[roomCode]) {
@@ -262,9 +384,7 @@ io.on('connection', (socket) => {
                 return socket.emit('room-error', 'Player not found in room');
             }
 
-            // Limit message length
             const trimmedMessage = message.trim().substring(0, 500);
-
             const chatMessage = {
                 id: Date.now(),
                 playerId: playerId,
@@ -276,23 +396,17 @@ io.on('connection', (socket) => {
 
             rooms[roomCode].chatMessages.push(chatMessage);
 
-            // Keep only last 100 messages
             if (rooms[roomCode].chatMessages.length > 100) {
                 rooms[roomCode].chatMessages = rooms[roomCode].chatMessages.slice(-100);
             }
 
-            // Broadcast message to all players in the room
             io.to(roomCode).emit('new-message', chatMessage);
-
-            console.log(`Message sent in room ${roomCode} by ${player.playerName}: ${trimmedMessage}`);
-
         } catch (err) {
             console.error('Error sending message:', err);
             socket.emit('room-error', 'Error sending message');
         }
     });
 
-    // Get room info
     socket.on('get-room-info', (roomCode) => {
         if (rooms[roomCode]) {
             socket.emit('room-info', rooms[roomCode]);
@@ -301,94 +415,180 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Handle disconnect
-    socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+    socket.on('request-game-results', ({ roomCode }) => {
+        processGameResults(roomCode);
+    });
 
-        // Remove player from all rooms
+    socket.on('judge-timer-ended', ({ roomCode }) => {
+        if (rooms[roomCode] && roomScores[roomCode]) {
+            const scoreAverages = {};
+            for (const playerId in roomScores[roomCode]) {
+                const scores = roomScores[roomCode][playerId];
+                const average = scores.length > 0 ?
+                    parseFloat((scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(2)) : 0;
+                scoreAverages[playerId] = average;
+
+                const player = rooms[roomCode].players.find(p => p.playerId === playerId);
+            }
+
+            const sortedPlayers = Object.entries(scoreAverages)
+                .sort(([, a], [, b]) => b - a)
+                .map(([playerId, average], index) => {
+                    const player = rooms[roomCode].players.find(p => p.playerId === playerId);
+                    return {
+                        rank: index + 1,
+                        playerId,
+                        playerName: player?.playerName || 'Unknown',
+                        average
+                    };
+                });
+
+        }
+    });
+
+    socket.on('disconnect', () => {
+
         for (const roomCode in rooms) {
             const room = rooms[roomCode];
             const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
 
             if (playerIndex !== -1) {
                 const removedPlayer = room.players.splice(playerIndex, 1)[0];
-                console.log(`Player ${removedPlayer.playerName} left room ${roomCode}`);
 
-                // If the host left, assign a new host
                 if (removedPlayer.isHost && room.players.length > 0) {
                     room.players[0].isHost = true;
-                    console.log(`New host assigned: ${room.players[0].playerName}`);
+                    io.to(roomCode).emit('host-updated', room.players[0].playerId);
                 }
 
-                // Broadcast updated player list to remaining players
                 io.to(roomCode).emit('players-updated', room.players);
 
-                // Delete room if empty
                 if (room.players.length === 0) {
                     delete rooms[roomCode];
-                    console.log(`Room ${roomCode} deleted (empty)`);
+                    delete roomDrawings[roomCode];
+                    delete roomScores[roomCode];
+                    console.log(`Room ${roomCode} deleted as all players left.`);
                 }
+
                 break;
             }
         }
     });
-
-    // Debug endpoint
-    socket.on('debug-rooms', () => {
-        console.log('Current rooms:', Object.keys(rooms));
-        for (const roomCode in rooms) {
-            console.log(`Room ${roomCode}:`, rooms[roomCode].players.map(p => p.playerName));
-        }
-        socket.emit('debug-rooms-response', rooms);
-    });
-
-
-    // On your server
-    const roomDrawings = {};
-
-    // Listen for drawing submissions
-    socket.on('submit-drawing', async ({ roomCode, playerId, playerName, character, image }) => {
-        if (!roomDrawings[roomCode]) roomDrawings[roomCode] = [];
-        // Prevent duplicate submissions
-        if (!roomDrawings[roomCode].some(d => d.playerId === playerId)) {
-            roomDrawings[roomCode].push({ playerId, playerName, character, image });
-        }
-
-        // Check if all players have submitted
-        const totalPlayers = rooms[roomCode]?.players?.length || 0;
-        if (roomDrawings[roomCode].length === totalPlayers) {
-            // Score and emit results
-            const results = await scoreDrawings(roomDrawings[roomCode], rooms[roomCode].selectedWord);
-            io.to(roomCode).emit('game-results', results);
-            // Clean up for next round
-            console.log('Emitting game-results for room', roomCode, results);
-            delete roomDrawings[roomCode];
-        }
-    });
-
-    // ...existing code...
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    async function scoreDrawings(drawings, word) {
-        // drawings: [{playerId, playerName, image}]
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-        const results = [];
-        for (const d of drawings) {
-            const prompt = `Score this drawing for the word "${word}". Return a score from 0 to 100.`;
-            const result = await model.generateContent([
-                prompt,
-                { inlineData: { data: d.image.split(',')[1], mimeType: "image/png" } }
-            ]);
-            const score = parseInt(result.response.text().match(/\d+/)[0]);
-            results.push({ ...d, score });
-        }
-        // Sort by score descending
-        results.sort((a, b) => b.score - a.score);
-        return results;
-    }
-
 });
+
+function checkVotingComplete(roomCode) {
+    try {
+        if (!rooms[roomCode] || !roomScores[roomCode]) return;
+
+        const playersInRoom = rooms[roomCode].players;
+        const drawingsData = roomDrawings[roomCode] || {};
+        const scoringTracker = rooms[roomCode].scoringTracker || {};
+
+        const playersWithSubmittedDrawings = playersInRoom.filter(p => drawingsData[p.playerId]);
+
+        let allPlayersFinishedVoting = true;
+
+        for (const player of playersInRoom) {
+            let drawingsScoredByThisPlayer = 0;
+
+            for (const targetPlayer of playersWithSubmittedDrawings) {
+                if (player.playerId === targetPlayer.playerId) {
+                    continue;
+                }
+
+                const scoringKey = `${player.playerId}-${targetPlayer.playerId}`;
+                if (scoringTracker[scoringKey]) {
+                    drawingsScoredByThisPlayer++;
+                }
+            }
+
+            const requiredScores = playersWithSubmittedDrawings.filter(
+                p => p.playerId !== player.playerId
+            ).length;
+
+            if (drawingsScoredByThisPlayer < requiredScores) {
+                allPlayersFinishedVoting = false;
+                break;
+            }
+        }
+
+        if (allPlayersFinishedVoting) {
+            io.to(roomCode).emit('voting-complete', {
+                message: 'All players have finished voting!',
+                canViewResults: true
+            });
+        }
+    } catch (err) {
+        console.error('Error checking voting completion:', err);
+    }
+}
+
+function processGameResults(roomCode) {
+    try {
+        if (!rooms[roomCode]) {
+            console.log(`Room ${roomCode} not found for processing results`);
+            return;
+        }
+
+        const drawings = roomDrawings[roomCode] || {};
+        const players = rooms[roomCode].players;
+        const selectedWord = rooms[roomCode].selectedWord;
+        const scores = roomScores[roomCode] || {};
+
+        const results = [];
+
+        players.forEach(player => {
+            const drawing = drawings[player.playerId];
+            const playerScores = scores[player.playerId] || [];
+            const totalScore = playerScores.reduce((sum, s) => sum + s, 0);
+            const totalVotes = playerScores.length;
+            const averageScore = totalVotes > 0 ? parseFloat((totalScore / totalVotes).toFixed(2)) : 0;
+
+            results.push({
+                playerId: player.playerId,
+                playerName: player.playerName,
+                character: player.character,
+                image: drawing ? drawing.image : null,
+                hasSubmitted: !!drawing,
+                totalScore,
+                totalVotes,
+                averageScore,
+                scores: playerScores
+            });
+        });
+
+        results.sort((a, b) => {
+            if (b.averageScore !== a.averageScore) {
+                return b.averageScore - a.averageScore;
+            }
+            if (b.totalVotes !== a.totalVotes) {
+                return b.totalVotes - a.totalVotes;
+            }
+
+            if (a.hasSubmitted && !b.hasSubmitted) {
+                return -1;
+            }
+            if (!a.hasSubmitted && b.hasSubmitted) {
+                return 1;
+            }
+
+            return 0;
+        });
+
+        results.forEach((result, index) => {
+            result.rank = index + 1;
+        });
+
+        io.to(roomCode).emit('game-results', {
+            roomCode,
+            selectedWord,
+            results,
+            totalPlayers: players.length,
+            submittedDrawings: Object.keys(drawings).length
+        });
+    } catch (err) {
+        console.error('Error processing game results:', err);
+    }
+}
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
