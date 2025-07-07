@@ -256,16 +256,16 @@ const JudgePage = () => {
             <div className="fixed inset-0 -z-10">
                 <Background />
             </div>
-            <div className="relative z-10 p-6">
+            <div className="relative z-10 p-6 sm:p-4 md:p-6">
                 <div className="max-w-6xl mx-auto">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between mb-8 sm:mb-6 md:mb-8 sm:flex-col md:flex-row sm:gap-4 md:gap-0">
+                        <div className="flex items-center gap-4 sm:gap-3 md:gap-4 sm:flex-col md:flex-row sm:text-center md:text-left">
                             <div onClick={() => { navigate('/') }} className='cursor-pointer'>
                                 <Logo />
                             </div>
                             <div>
-                                <h1 className="text-3xl font-bold text-white mb-2">Judge the Drawings</h1>
-                                <p className="text-blue-200 flex items-center gap-2">
+                                <h1 className="text-3xl sm:text-2xl md:text-3xl font-bold text-white mb-2">Judge the Drawings</h1>
+                                <p className="text-blue-200 flex items-center gap-2 sm:justify-center md:justify-start">
                                     <Trophy size={18} />
                                     Rate each drawing from 1-10 stars
                                 </p>
@@ -275,21 +275,21 @@ const JudgePage = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-300">
+                        <div className="flex items-center gap-4 sm:gap-2 md:gap-4 sm:flex-col md:flex-row">
+                            <div className="text-sm text-gray-300 sm:hidden md:block">
                                 {connectionStatus}
                             </div>
 
-                            <div className="bg-black/30 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+                            <div className="bg-black/30 backdrop-blur-sm rounded-lg px-4 py-2 sm:px-3 sm:py-2 md:px-4 md:py-2 flex items-center gap-2">
                                 <Clock size={20} className="text-yellow-400" />
-                                <span className={`font-bold text-lg ${timeLeft <= 30 ? 'text-red-400' : 'text-white'}`}>
+                                <span className={`font-bold text-lg sm:text-base md:text-lg ${timeLeft <= 30 ? 'text-red-400' : 'text-white'}`}>
                                     {formatTime(timeLeft)}
                                 </span>
                             </div>
 
                             <button
                                 onClick={() => setShowChat(!showChat)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-3 sm:py-2 md:px-4 md:py-2 rounded-lg flex items-center gap-2 transition-colors sm:text-sm md:text-base"
                             >
                                 <MessageSquare size={20} />
                                 Chat
@@ -299,40 +299,40 @@ const JudgePage = () => {
 
                     {votingComplete && (
                         <div className="text-center mb-6">
-                            <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl p-4 inline-block">
-                                <div className="flex items-center justify-center gap-2 text-white">
+                            <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl p-4 sm:p-3 md:p-4 inline-block">
+                                <div className="flex items-center justify-center gap-2 text-white sm:flex-col md:flex-row">
                                     <Trophy size={20} className="text-yellow-400" />
-                                    <span className="font-bold">All players have finished voting! Results are ready.</span>
+                                    <span className="font-bold sm:text-sm md:text-base">All players have finished voting! Results are ready.</span>
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {gameResults.selectedWord && (
-                        <div className="text-center mb-8">
-                            <div className="bg-black/30 backdrop-blur-sm rounded-xl p-6 inline-block">
-                                <h2 className="text-white text-lg mb-2">The word was:</h2>
-                                <div className="text-3xl font-bold text-yellow-400 bg-black/20 px-6 py-3 rounded-lg">
+                        <div className="text-center mb-8 sm:mb-6 md:mb-8">
+                            <div className="bg-black/30 backdrop-blur-sm rounded-xl p-6 sm:p-4 md:p-6 inline-block">
+                                <h2 className="text-white text-lg sm:text-base md:text-lg mb-2">The word was:</h2>
+                                <div className="text-3xl sm:text-2xl md:text-3xl font-bold text-yellow-400 bg-black/20 px-6 py-3 sm:px-4 sm:py-2 md:px-6 md:py-3 rounded-lg">
                                     {gameResults.selectedWord}
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-4 md:gap-6 lg:gap-8">
                         {gameResults.results.map((player, index) => {
                             const isOwnDrawing = player.playerId === currentPlayer.id;
                             const hasScored = submittedScores.has(player.playerId);
 
                             return (
-                                <div key={player.playerId} className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300">
+                                <div key={player.playerId} className="bg-black/20 backdrop-blur-sm rounded-xl p-6 sm:p-4 md:p-6 border border-white/10 hover:border-white/20 transition-all duration-300">
 
-                                    <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center justify-between mb-6 sm:mb-4 md:mb-6">
                                         <div className="flex items-center gap-3">
-                                            {isOwnDrawing ? <img src={player.character} alt="" className='rounded-full w-10 h-10' /> : ' '}
+                                            {isOwnDrawing ? <img src={player.character} alt="" className='rounded-full w-10 h-10 sm:w-8 sm:h-8 md:w-10 md:h-10' /> : ' '}
 
                                             <div>
-                                                <h3 className="text-white font-bold text-lg">
+                                                <h3 className="text-white font-bold text-lg sm:text-base md:text-lg">
                                                     {isOwnDrawing ? 'Your Drawing' : `Player ${index + 1}`}
                                                 </h3>
                                                 <div className="text-sm flex items-center gap-1 text-green-400">
@@ -344,33 +344,33 @@ const JudgePage = () => {
                                         </div>
 
                                         {isOwnDrawing && (
-                                            <div className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium">
+                                            <div className="bg-yellow-500/20 text-yellow-400 px-3 py-1 sm:px-2 sm:py-1 md:px-3 md:py-1 rounded-full text-sm sm:text-xs md:text-sm font-medium">
                                                 Your Art
                                             </div>
                                         )}
                                         {!isOwnDrawing && hasScored && (
-                                            <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                                            <div className="bg-green-500/20 text-green-400 px-3 py-1 sm:px-2 sm:py-1 md:px-3 md:py-1 rounded-full text-sm sm:text-xs md:text-sm font-medium flex items-center gap-1">
                                                 <Check size={14} />
                                                 Scored
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="mb-6">
+                                    <div className="mb-6 sm:mb-4 md:mb-6">
                                         {player.image ? (
                                             <div className="relative group">
                                                 <img
                                                     src={player.image}
                                                     alt={`${player.playerName}'s drawing`}
-                                                    className="w-full h-56 object-contain bg-white rounded-lg border-2 border-gray-600 transition-transform duration-300 group-hover:scale-105"
+                                                    className="w-full h-56 sm:h-40 md:h-56 object-contain bg-white rounded-lg border-2 border-gray-600 transition-transform duration-300 group-hover:scale-105"
                                                 />
                                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-all duration-300" />
                                             </div>
                                         ) : (
-                                            <div className="w-full h-56 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-600">
+                                            <div className="w-full h-56 sm:h-40 md:h-56 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-600">
                                                 <div className="text-center">
-                                                    <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                                                        <Sketchaa className="w-8 h-8 text-gray-400" />
+                                                    <div className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                                        <Sketchaa className="w-8 h-8 sm:w-6 sm:h-6 md:w-8 md:h-8 text-gray-400" />
                                                     </div>
                                                     <span className="text-gray-400 text-sm">No drawing submitted</span>
                                                 </div>
@@ -379,7 +379,7 @@ const JudgePage = () => {
                                     </div>
 
                                     {player.hasSubmitted && (
-                                        <div className="mb-4 p-3 bg-black/20 rounded-lg">
+                                        <div className="mb-4 p-3 sm:p-2 md:p-3 bg-black/20 rounded-lg">
                                             <div className="text-white text-sm">
                                                 <div className="flex justify-between items-center">
                                                     <span>Current Score:</span>
@@ -396,7 +396,7 @@ const JudgePage = () => {
                                                     </div>
                                                 )}
                                                 {player.scores && player.scores.length > 0 && (
-                                                    <div className="flex justify-between items-center mt-1">
+                                                    <div className="flex justify-between items-center mt-1 sm:flex-col sm:items-start sm:gap-1 md:flex-row md:items-center">
                                                         <span>Individual Scores:</span>
                                                         <span className="font-mono text-xs text-gray-300">
                                                             [{player.scores.join(', ')}]
@@ -442,7 +442,7 @@ const JudgePage = () => {
                                             <button
                                                 onClick={() => handleSubmitScore(player.playerId)}
                                                 disabled={hasScored}
-                                                className={`w-full py-3 rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2 ${hasScored
+                                                className={`w-full py-3 sm:py-2 md:py-3 rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2 sm:text-sm md:text-base ${hasScored
                                                     ? 'bg-green-600 cursor-not-allowed'
                                                     : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:scale-105'
                                                     } text-white`}
@@ -464,7 +464,7 @@ const JudgePage = () => {
 
                                     {isOwnDrawing && player.hasSubmitted && (
                                         <div className="text-center py-4">
-                                            <div className="bg-yellow-500/20 text-yellow-400 px-4 py-2 rounded-lg text-sm">
+                                            <div className="bg-yellow-500/20 text-yellow-400 px-4 py-2 sm:px-3 sm:py-2 md:px-4 md:py-2 rounded-lg text-sm">
                                                 This is your drawing! Wait for others to score it.
                                             </div>
                                         </div>
@@ -475,13 +475,13 @@ const JudgePage = () => {
                     </div>
 
                     {allScoresSubmitted && !votingComplete && (
-                        <div className="text-center mt-12">
-                            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 inline-block">
-                                <div className="flex items-center justify-center gap-3 mb-3">
+                        <div className="text-center mt-12 sm:mt-8 md:mt-12">
+                            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 sm:p-4 md:p-6 inline-block">
+                                <div className="flex items-center justify-center gap-3 mb-3 sm:flex-col md:flex-row">
                                     <Check size={24} className="text-green-400" />
-                                    <h2 className="text-xl font-bold text-white">You've Scored All Drawings!</h2>
+                                    <h2 className="text-xl sm:text-lg md:text-xl font-bold text-white">You've Scored All Drawings!</h2>
                                 </div>
-                                <p className="text-blue-100 mb-4">
+                                <p className="text-blue-100 mb-4 sm:text-sm md:text-base">
                                     Great job! You've scored {totalScored} out of {totalScoreableDrawings} drawings.
                                 </p>
                                 <p className="text-blue-200 text-sm">
@@ -494,8 +494,8 @@ const JudgePage = () => {
             </div>
 
             {showChat && (
-                <div className="fixed bottom-0 right-0 h-96 w-80 bg-black/80 backdrop-blur-sm flex flex-col z-50 border-l border-t border-white/10 rounded-tl-lg">
-                    <div className="flex items-center justify-between p-4 border-b border-gray-600">
+                <div className="fixed bottom-0 right-0 h-96 w-80 sm:w-full sm:h-full md:w-80 md:h-96 bg-black/80 backdrop-blur-sm flex flex-col z-50 border-l border-t border-white/10 rounded-tl-lg sm:border-none sm:rounded-none md:border-l md:border-t md:rounded-tl-lg">
+                    <div className="flex items-center justify-between p-4 sm:p-3 md:p-4 border-b border-gray-600">
                         <h3 className="text-white font-bold flex items-center gap-2">
                             <MessageSquare size={18} />
                             Chat
@@ -508,7 +508,7 @@ const JudgePage = () => {
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-3 md:p-4 space-y-2">
                         {chatMessages.map((msg) => (
                             <div key={msg.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
                                 <div className="flex items-center gap-2 mb-1">
@@ -523,7 +523,7 @@ const JudgePage = () => {
                         <div ref={chatEndRef} />
                     </div>
 
-                    <div className="p-4 border-t border-gray-600">
+                    <div className="p-4 sm:p-3 md:p-4 border-t border-gray-600">
                         <div className="flex gap-2">
                             <textarea
                                 ref={chatInputRef}
@@ -531,14 +531,14 @@ const JudgePage = () => {
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 onKeyPress={handleKeyPress}
                                 placeholder="Type your message..."
-                                className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-gray-600 transition-colors"
+                                className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 sm:px-2 sm:py-2 md:px-3 md:py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-gray-600 transition-colors"
                                 rows="1"
                                 maxLength={500}
                             />
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!newMessage.trim()}
-                                className={`px-4 py-2 rounded-lg flex items-center justify-center transition-colors ${newMessage.trim()
+                                className={`px-4 py-2 sm:px-3 sm:py-2 md:px-4 md:py-2 rounded-lg flex items-center justify-center transition-colors ${newMessage.trim()
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                     }`}

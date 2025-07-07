@@ -151,22 +151,22 @@ const RoomPage = () => {
   };
 
   return (
-    <div className="flex justify-center h-[100vh] items-center">
+    <div className="flex justify-center h-[100vh] items-center px-4 sm:px-6 lg:px-8">
       <div className="fixed inset-0 -z-10">
         <Background />
       </div>
-      <div className="bg-black/40 w-[90%] h-auto py-20 flex flex-col justify-center items-center gap-20">
+      <div className="bg-black/40 w-full max-w-6xl h-auto py-8 sm:py-12 md:py-16 lg:py-20 flex flex-col justify-center items-center gap-8 sm:gap-12 md:gap-16 lg:gap-20">
         <div className="flex cursor-pointer" onClick={() => navigate('/')}>
           <Sketchaa />
           <Logo />
         </div>
 
-        <div className="flex gap-3 px-15">
-          <div className="bg-[#e0e0e0] w-[33%] p-3 rounded-2xl flex flex-col gap-6">
-            <h1 className="font-extrabold">Welcome to Sketchaa !!!</h1>
-            <h6 className="text-[14px]">Create a new room or join an existing one to start drawing!</h6>
+        <div className="flex flex-col md:flex-row gap-3 md:gap-6 px-4 sm:px-6 md:px-8 lg:px-15 w-full">
+          <div className="bg-[#e0e0e0] w-full md:w-[33%] p-3 sm:p-4 md:p-6 rounded-2xl flex flex-col gap-4 sm:gap-6">
+            <h1 className="font-extrabold text-sm sm:text-base md:text-lg">Welcome to Sketchaa !!!</h1>
+            <h6 className="text-xs sm:text-sm md:text-[14px]">Create a new room or join an existing one to start drawing!</h6>
             <button
-              className={`w-full py-1 rounded text-white cursor-pointer ${isCreating || !socket.connected
+              className={`w-full py-2 sm:py-3 md:py-1 rounded text-white cursor-pointer text-sm sm:text-base ${isCreating || !socket.connected
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700'
                 }`}
@@ -176,26 +176,26 @@ const RoomPage = () => {
               {isCreating ? 'Creating...' : 'Create a Room'}
             </button>
             {roomCode && (
-              <div className="text-center p-3 bg-green-100 rounded">
-                <span className='block text-black font-semibold text-lg'>
+              <div className="text-center p-2 sm:p-3 bg-green-100 rounded">
+                <span className='block text-black font-semibold text-sm sm:text-base md:text-lg'>
                   Room Code: <span className='text-blue-800'>{roomCode}</span>
                 </span>
               </div>
             )}
           </div>
 
-          <div className="bg-[#e0e0e0] w-[33%] p-3 rounded-2xl flex flex-col gap-6 items-start">
-            <h1 className="font-extrabold">Join a Room...</h1>
+          <div className="bg-[#e0e0e0] w-full md:w-[33%] p-3 sm:p-4 md:p-6 rounded-2xl flex flex-col gap-4 sm:gap-6 items-start">
+            <h1 className="font-extrabold text-sm sm:text-base md:text-lg">Join a Room...</h1>
             <input
               type="text"
               placeholder="Enter Room-Code"
-              className="w-full px-2 py-2 bg-white rounded"
+              className="w-full px-2 sm:px-3 py-2 sm:py-3 bg-white rounded text-sm sm:text-base"
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value.toUpperCase())}
               maxLength={6}
             />
             <button
-              className={`w-full py-1 rounded text-white cursor-pointer ${isJoining || !socket.connected
+              className={`w-full py-2 sm:py-3 md:py-1 rounded text-white cursor-pointer text-sm sm:text-base ${isJoining || !socket.connected
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700'
                 }`}
@@ -206,9 +206,9 @@ const RoomPage = () => {
             </button>
           </div>
 
-          <div className="bg-[#e0e0e0] w-[33%] p-3 rounded-2xl flex flex-col gap-3">
-            <h1 className="font-extrabold">Game Info</h1>
-            <p className="text-[13px]">
+          <div className="bg-[#e0e0e0] w-full md:w-[33%] p-3 sm:p-4 md:p-6 rounded-2xl flex flex-col gap-3 sm:gap-4">
+            <h1 className="font-extrabold text-sm sm:text-base md:text-lg">Game Info</h1>
+            <p className="text-xs sm:text-sm md:text-[13px]">
               Be quick!! You only have 60 sec to draw, then everyone will rate each other's drawings anonymously. Scores will be revealed and the leaderboard will decide the winner.
               Enjoy :)
             </p>

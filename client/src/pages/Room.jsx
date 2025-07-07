@@ -301,7 +301,7 @@ const Room = () => {
         const handleRequestFinalDrawing = () => {
             if (canvasRef.current && !drawingSubmitted && gameState.isStarted) {
                 handleSubmitDrawing();
-            } 
+            }
         };
 
         const handleGameEnded = () => {
@@ -526,71 +526,69 @@ const Room = () => {
             </div>
 
             <div className="relative z-10 h-screen flex flex-col">
-                <div className="bg-black/60 backdrop-blur-sm p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="bg-black/60 backdrop-blur-sm p-2 sm:p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
                             <Sketchaa />
                             <Logo />
                         </div>
                         <div className="text-white">
-                            <span className="text-lg font-bold">Room: {roomCode}</span>
-                            <div className="text-sm text-gray-300">{connectionStatus}</div>
+                            <span className="text-sm sm:text-lg font-bold">Room: {roomCode}</span>
+                            <div className="text-xs sm:text-sm text-gray-300 hidden sm:block">{connectionStatus}</div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${gameState.isStarted ? 'bg-red-600' : 'bg-blue-600'
-                            }`}>
-                            <Clock size={20} className="text-white" />
-                            <span className="text-white font-bold text-xl">
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+                        <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-lg ${gameState.isStarted ? 'bg-red-600' : 'bg-blue-600'}`}>
+                            <Clock size={16} className="text-white sm:w-5 sm:h-5" />
+                            <span className="text-white font-bold text-sm sm:text-xl">
                                 {formatTime(time)}
                             </span>
                         </div>
 
                         {gameState.isStarted && (
-                            <div className={`px-3 py-1 rounded-lg text-sm font-bold ${drawingSubmitted ? 'bg-green-600' : 'bg-orange-600'
-                                }`}>
+                            <div className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-bold ${drawingSubmitted ? 'bg-green-600' : 'bg-orange-600'}`}>
                                 {drawingSubmitted ? '✓ Submitted' : 'Drawing...'}
                             </div>
                         )}
 
                         <button
                             onClick={() => setShowPlayers(!showPlayers)}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                         >
-                            <Users size={20} />
-                            <span>{players.length}</span>
+                            <Users size={16} className="sm:w-5 sm:h-5" />
+                            <span className="text-xs sm:text-base">{players.length}</span>
                         </button>
 
                         <button
                             onClick={() => setShowChat(!showChat)}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                         >
-                            <MessageSquare size={20} />
-                            <span>Chat</span>
+                            <MessageSquare size={16} className="sm:w-5 sm:h-5" />
+                            <span className="text-xs sm:text-base hidden sm:inline">Chat</span>
                         </button>
 
                         <button
                             onClick={handleLeaveRoom}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            className="px-2 sm:px-4 py-1 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs sm:text-base"
                         >
                             Leave
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-1 flex overflow-y-scroll no-scrollbar">
-                    <div className="w-80 bg-black/40 backdrop-blur-sm p-4 flex flex-col gap-4 overflow-y-scroll no-scrollbar">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                            <h3 className="text-white font-bold mb-2">Word to Draw:</h3>
-                            <div className="text-2xl font-bold text-yellow-400 mb-4">
+                <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                    <div className="w-full lg:w-80 bg-black/40 backdrop-blur-sm p-2 sm:p-4 flex flex-col gap-2 sm:gap-4 overflow-y-auto no-scrollbar max-h-48 lg:max-h-none">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-4">
+                            <h3 className="text-white font-bold mb-2 text-sm sm:text-base">Word to Draw:</h3>
+                            <div className="text-lg sm:text-2xl font-bold text-yellow-400 mb-2 sm:mb-4">
                                 {selectedWord || 'No word selected'}
                             </div>
                             {isHost && (
                                 <button
                                     onClick={handleWordChange}
                                     disabled={isWordChanging}
-                                    className={`w-full py-2 rounded-lg transition-colors ${isWordChanging
+                                    className={`w-full py-2 rounded-lg transition-colors text-sm sm:text-base ${isWordChanging
                                         ? 'bg-gray-600 cursor-not-allowed'
                                         : 'bg-blue-600 hover:bg-blue-700'
                                         } text-white`}
@@ -600,19 +598,19 @@ const Room = () => {
                             )}
                         </div>
 
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                            <h3 className="text-white font-bold mb-4">Game Controls:</h3>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-4">
+                            <h3 className="text-white font-bold mb-2 sm:mb-4 text-sm sm:text-base">Game Controls:</h3>
 
                             {isHost && !gameState.isStarted && (
                                 <button
                                     onClick={handleStartGame}
                                     disabled={isStartingGame}
-                                    className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${isStartingGame
+                                    className={`w-full py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base ${isStartingGame
                                         ? 'bg-gray-600 cursor-not-allowed'
                                         : 'bg-green-600 hover:bg-green-700'
                                         } text-white font-bold`}
                                 >
-                                    <Play size={20} />
+                                    <Play size={16} className="sm:w-5 sm:h-5" />
                                     {isStartingGame ? 'Starting...' : 'Start Game'}
                                 </button>
                             )}
@@ -620,57 +618,57 @@ const Room = () => {
                             {gameState.isStarted && (
                                 <div className="space-y-2">
                                     <div className="text-center">
-                                        <div className="text-green-400 font-bold mb-2">Game in Progress!</div>
-                                        <div className="text-white text-sm">Draw the word above</div>
+                                        <div className="text-green-400 font-bold mb-2 text-sm sm:text-base">Game in Progress!</div>
+                                        <div className="text-white text-xs sm:text-sm">Draw the word above</div>
                                     </div>
 
                                     <button
                                         onClick={handleManualSubmit}
                                         disabled={drawingSubmitted || isSubmittingDrawing}
-                                        className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${drawingSubmitted
+                                        className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base ${drawingSubmitted
                                             ? 'bg-green-600 cursor-not-allowed'
                                             : isSubmittingDrawing
                                                 ? 'bg-gray-600 cursor-not-allowed'
                                                 : 'bg-blue-600 hover:bg-blue-700'
                                             } text-white font-bold`}
                                     >
-                                        <Send size={16} />
+                                        <Send size={14} className="sm:w-4 sm:h-4" />
                                         {drawingSubmitted ? 'Submitted' : isSubmittingDrawing ? 'Submitting...' : 'Submit Drawing'}
                                     </button>
                                 </div>
                             )}
 
                             {!gameState.isStarted && !isHost && (
-                                <div className="text-center text-gray-400">
+                                <div className="text-center text-gray-400 text-sm">
                                     Waiting for host to start the game...
                                 </div>
                             )}
                         </div>
 
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                            <h3 className="text-white font-bold mb-4">Drawing Tools:</h3>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-4">
+                            <h3 className="text-white font-bold mb-2 sm:mb-4 text-sm sm:text-base">Drawing Tools:</h3>
 
-                            <div className="flex gap-2 mb-4">
+                            <div className="flex gap-2 mb-2 sm:mb-4">
                                 <button
                                     onClick={() => setIsErasing(false)}
-                                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${!isErasing ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-700'
+                                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1 sm:gap-2 transition-colors text-xs sm:text-sm ${!isErasing ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-700'
                                         } text-white`}
                                 >
-                                    <PencilIcon size={16} />
+                                    <PencilIcon size={14} className="sm:w-4 sm:h-4" />
                                     Draw
                                 </button>
                                 <button
                                     onClick={() => setIsErasing(true)}
-                                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${isErasing ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-700'
+                                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1 sm:gap-2 transition-colors text-xs sm:text-sm ${isErasing ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-700'
                                         } text-white`}
                                 >
-                                    <LucideEraser size={16} />
+                                    <LucideEraser size={14} className="sm:w-4 sm:h-4" />
                                     Erase
                                 </button>
                             </div>
 
-                            <div className="mb-4">
-                                <label className="text-white text-sm mb-2 block">Brush Size: {brushSize}px</label>
+                            <div className="mb-2 sm:mb-4">
+                                <label className="text-white text-xs sm:text-sm mb-2 block">Brush Size: {brushSize}px</label>
                                 <input
                                     type="range"
                                     min="1"
@@ -681,27 +679,27 @@ const Room = () => {
                                 />
                             </div>
 
-                            <div className="mb-4">
-                                <label className="text-white text-sm mb-2 block">Color:</label>
+                            <div className="mb-2 sm:mb-4">
+                                <label className="text-white text-xs sm:text-sm mb-2 block">Color:</label>
                                 <input
                                     type="color"
                                     value={brushColor}
                                     onChange={(e) => setBrushColor(e.target.value)}
-                                    className="w-full h-10 rounded-lg"
+                                    className="w-full h-8 sm:h-10 rounded-lg"
                                 />
                             </div>
 
                             <button
                                 onClick={handleClearCanvas}
-                                className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
+                                className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center gap-1 sm:gap-2 transition-colors text-xs sm:text-sm"
                             >
-                                <Trash size={16} />
+                                <Trash size={14} className="sm:w-4 sm:h-4" />
                                 Clear Canvas
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex-1 p-4">
+                    <div className="flex-1 p-2 sm:p-4">
                         <div
                             ref={canvasContainerRef}
                             className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden"
@@ -721,7 +719,7 @@ const Room = () => {
             </div>
 
             {showPlayers && (
-                <div className="fixed top-0 right-0 h-full w-80 bg-black/80 backdrop-blur-sm p-4 z-50 overflow-y-auto">
+                <div className="fixed top-0 right-0 h-full w-full sm:w-80 bg-black/80 backdrop-blur-sm p-4 z-50 overflow-y-auto">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-white font-bold text-lg">Players ({players.length})</h3>
                         <button
@@ -738,9 +736,10 @@ const Room = () => {
                                 key={player.playerId}
                                 className="bg-white/10 backdrop-blur-sm rounded-lg p-3 flex items-center gap-3"
                             >
-                                <img src={player.character} alt="" className='rounded-full w-10 h-10' />
+                                <img src={player.character} alt="" className='rounded-full w-8 h-8 sm:w-10 sm:h-10' />
                                 <div className="flex-1">
                                     <div className="text-white font-medium flex items-center gap-2">
+                                        {player.playerName}
                                         {player.playerName}
                                         {player.isHost && (
                                             <Crown size={16} className="text-yellow-400" />
@@ -755,25 +754,25 @@ const Room = () => {
             )}
 
             {showChat && (
-                <div className="fixed bottom-0 right-0 h-96 w-80 bg-black/80 backdrop-blur-sm flex flex-col z-50">
-                    <div className="flex items-center justify-between p-4 border-b border-gray-600">
-                        <h3 className="text-white font-bold">Chat</h3>
+                <div className="fixed bottom-0 right-0 h-96 w-full sm:w-80 bg-black/80 backdrop-blur-sm flex flex-col z-50">
+                    <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-600">
+                        <h3 className="text-white font-bold text-base sm:text-lg">Chat</h3>
                         <button
                             onClick={() => setShowChat(false)}
-                            className="text-white hover:text-gray-300"
+                            className="text-white hover:text-gray-300 p-1"
                         >
-                            <X size={20} />
+                            <X size={20} className="sm:w-6 sm:h-6" />
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 no-scrollbar">
                         {chatMessages.map((msg) => (
-                            <div key={msg.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
+                            <div key={msg.id} className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <img src={msg.character} alt="" className='rounded-full w-7 h-7' />
-                                    <span className="text-white font-medium text-sm">{msg.playerName}</span>
+                                    <img src={msg.character} alt="" className='rounded-full w-6 h-6 sm:w-7 sm:h-7' />
+                                    <span className="text-white font-medium text-xs sm:text-sm">{msg.playerName}</span>
                                 </div>
-                                <div className="text-gray-300 text-sm break-words">
+                                <div className="text-gray-300 text-xs sm:text-sm break-words">
                                     {msg.message}
                                 </div>
                             </div>
@@ -781,7 +780,7 @@ const Room = () => {
                         <div ref={chatEndRef} />
                     </div>
 
-                    <div className="p-4 border-t border-gray-600">
+                    <div className="p-3 sm:p-4 border-t border-gray-600">
                         <div className="flex gap-2">
                             <textarea
                                 ref={chatInputRef}
@@ -789,19 +788,19 @@ const Room = () => {
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 onKeyPress={handleKeyPress}
                                 placeholder="Type your message..."
-                                className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="flex-1 bg-gray-700 text-white rounded-lg px-2 sm:px-3 py-1 sm:py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                                 rows="1"
                                 maxLength={500}
                             />
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!newMessage.trim()}
-                                className={`px-4 py-2 rounded-lg flex items-center justify-center transition-colors ${newMessage.trim()
+                                className={`px-3 sm:px-4 py-1 sm:py-2 rounded-lg flex items-center justify-center transition-colors ${newMessage.trim()
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
-                                <Send size={16} />
+                                <Send size={14} className="sm:w-4 sm:h-4" />
                             </button>
                         </div>
                     </div>
