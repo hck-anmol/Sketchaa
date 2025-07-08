@@ -294,6 +294,15 @@ const JudgePage = () => {
                                 <MessageSquare size={20} />
                                 Chat
                             </button>
+                            {votingComplete && (
+                                <button
+                                    onClick={() => navigate(`/room/${roomCode}/results`)}
+                                    className="bg-green-600 hover:bg-green-500 text-white px-7 py-2 sm:px-3 sm:py-2 md:px-4 md:py-2 rounded-lg flex items-center gap-2 transition-colors sm:text-sm md:text-base"
+                                >
+                                    Show Results
+                                </button>
+                            )}
+
                         </div>
                     </div>
 
