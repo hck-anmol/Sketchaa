@@ -23,83 +23,54 @@ const HomePage = () => {
     };
 
     const handlePlayClick = async () => {
-        const existingData = JSON.parse(localStorage.getItem("playerInfoSolo"));
-        const generatedId = generatePlayerId();
-
-        if (existingData) {
-            const updatedPlayer = {
-                id: generatedId,
-                name: name.trim() || existingData.name, 
-                character: existingData.character,
-            };
-
-            localStorage.setItem("playerInfoSolo", JSON.stringify(updatedPlayer));
-
-            const randomIndex = Math.floor(Math.random() * drawingwords.length);
-            const word = drawingwords[randomIndex];
-            setpracticeWord(word);
-            localStorage.setItem("practice-word", JSON.stringify(word));
-
-            navigate(`/game/${generatedId}`);
-            return;
-        }
-
         if (!name.trim()) {
             toast.error('Please enter your name!');
             return;
         }
 
-        const newPlayer = {
+        const generatedId = generatePlayerId();
+
+        const playerData = JSON.parse(localStorage.getItem("playerInfoSolo")) || {
             id: generatedId,
             name,
             character: characterData[characterIndex],
         };
-
-        localStorage.setItem("playerInfoSolo", JSON.stringify(newPlayer));
 
         const randomIndex = Math.floor(Math.random() * drawingwords.length);
         const word = drawingwords[randomIndex];
         setpracticeWord(word);
         localStorage.setItem("practice-word", JSON.stringify(word));
 
+        localStorage.setItem("playerInfoSolo", JSON.stringify(playerData));
         navigate(`/game/${generatedId}`);
     };
 
     const handleRoomClick = () => {
-    const existingData = JSON.parse(localStorage.getItem("playerInfoSolo"));
-    const generatedId = generatePlayerId();
+        if (!name.trim()) {
+            toast.error('Please enter your name!');
+            return;
+        }
 
-    if (existingData) {
-        const updatedPlayer = {
+        const generatedId = generatePlayerId();
+
+        const playerData = JSON.parse(localStorage.getItem("playerInfoSolo")) || {
             id: generatedId,
-            name: name.trim() || existingData.name, 
-            character: existingData.character,
+            name,
+            character: characterData[characterIndex],
         };
 
-        localStorage.setItem("playerInfoSolo", JSON.stringify(updatedPlayer));
-        localStorage.setItem("playerInfoMulti", JSON.stringify(updatedPlayer));
 
+        localStorage.setItem("playerInfoMulti", JSON.stringify(playerData));
+        localStorage.setItem("playerInfoSolo", JSON.stringify(playerData));
         navigate('/room');
-        return;
-    }
-
-    if (!name.trim()) {
-        toast.error('Please enter your name!');
-        return;
-    }
-
-    const newPlayer = {
-        id: generatedId,
-        name,
-        character: characterData[characterIndex],
     };
 
-    localStorage.setItem("playerInfoSolo", JSON.stringify(newPlayer));
-    localStorage.setItem("playerInfoMulti", JSON.stringify(newPlayer));
 
-    navigate('/room');
-};
-
+    const generatePlayerId = () => {
+        const newId = ((Math.floor(100000000 + Math.random() * 900000000)).toString());
+        setplayerId(newId);
+        return newId;
+    };
 
     return (
         <>
