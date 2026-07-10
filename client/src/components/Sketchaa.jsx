@@ -1,36 +1,36 @@
 import React from 'react'
 
-const delays = [
-    '0s', '0.075s', '0.15s', '0.225s', '0.3s', '0.375s', '0.45s', '0.525s'
-]
-const letters = [
-    { char: 'S', color: '#FF4C4C' },
-    { char: 'k', color: '#FFA500' },
-    { char: 'e', color: '#FFD700' },
-    { char: 't', color: '#32CD32' },
-    { char: 'C', color: '#1E90FF' },
-    { char: 'h', color: '#8A2BE2' },
-    { char: 'a', color: '#FF69B4' },
-    { char: 'a', color: '#00FFFF' },
+const delays = ['0s','0.08s','0.16s','0.24s','0.32s','0.40s','0.48s','0.56s'];
 
-]
+const letters = [
+    { char: 'S', color: '#f87171' },
+    { char: 'k', color: '#fb923c' },
+    { char: 'e', color: '#eab308' },
+    { char: 't', color: '#22c55e' },
+    { char: 'C', color: '#3b82f6' },
+    { char: 'h', color: '#8b5cf6' },
+    { char: 'a', color: '#ec4899' },
+    { char: 'a', color: '#06b6d4' },
+];
 
 const Sketchaa = () => {
     return (
-        <div>
-            <div className='flex'>
-                {letters.map((l, i) => (
-                    <span
-                        key={i}
-                        className='text-5xl font-semibold animate-bounce-custom'
-                        style={{ color: l.color, animationDelay: delays[i] }}
-                    >
-                        {l.char}
-                    </span>
-                ))}
-            </div>
+        <div className="flex items-end">
+            {letters.map((l, i) => (
+                <span
+                    key={i}
+                    className="text-4xl font-extrabold animate-bounce-custom leading-none select-none"
+                    style={{
+                        color: l.color,
+                        animationDelay: delays[i],
+                        letterSpacing: '-0.02em',
+                    }}
+                >
+                    {l.char}
+                </span>
+            ))}
         </div>
-    )
-}
+    );
+};
 
-export default Sketchaa
+export default Sketchaa;

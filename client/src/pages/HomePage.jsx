@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sketchaa from '../components/Sketchaa';
 import Logo from '../components/Logo';
 import Background from '../components/Background';
@@ -6,153 +6,253 @@ import { characterData, aboutImg } from '../assets/assets';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { drawingwords } from '../assets/assets';
+import { ChevronLeft, ChevronRight, Pencil, Users, Bot, Zap } from 'lucide-react';
 
 const HomePage = () => {
-    const [name, setName] = useState("");
+    const [name, setName] = useState('');
     const [characterIndex, setCharacterIndex] = useState(0);
     const navigate = useNavigate();
-    const [playerId, setplayerId] = useState("");
-    const [practiceWord, setpracticeWord] = useState("");
+    const [playerId, setPlayerId] = useState('');
 
-    const handlePrev = () => {
-        setCharacterIndex((prev) => (prev === 0 ? characterData.length - 1 : prev - 1));
-    };
-
-    const handleNext = () => {
-        setCharacterIndex((prev) => (prev === characterData.length - 1 ? 0 : prev + 1));
-    };
-
-    const handlePlayClick = async () => {
-        if (!name.trim()) {
-            toast.error('Please enter your name!');
-            return;
+    useEffect(() => {
+        const existing = JSON.parse(localStorage.getItem('playerInfoSolo'));
+        if (existing?.name) setName(existing.name);
+        if (existing?.character) {
+            const idx = characterData.findIndex(c => c === existing.character);
+            if (idx >= 0) setCharacterIndex(idx);
         }
+    }, []);
 
+    const handlePrev = () =>
+        setCharacterIndex(p => (p === 0 ? characterData.length - 1 : p - 1));
+    const handleNext = () =>
+        setCharacterIndex(p => (p === characterData.length - 1 ? 0 : p + 1));
+
+    const generatePlayerId = () => {
+        const id = Math.floor(100000000 + Math.random() * 900000000).toString();
+        setPlayerId(id);
+        return id;
+    };
+
+    const buildPlayerData = (generatedId) => {
+        const existing = JSON.parse(localStorage.getItem('playerInfoSolo'));
+        const finalName = name.trim() || existing?.name;
+        if (!finalName) { toast.error('Please enter your name!'); return null; }
+        return { id: generatedId, name: finalName, character: characterData[characterIndex] };
+    };
+
+    const handlePlayClick = () => {
         const generatedId = generatePlayerId();
-
-        const playerData = JSON.parse(localStorage.getItem("playerInfoSolo")) || {
-            id: generatedId,
-            name,
-            character: characterData[characterIndex],
-        };
+        const playerData = buildPlayerData(generatedId);
+        if (!playerData) return;
 
         const randomIndex = Math.floor(Math.random() * drawingwords.length);
         const word = drawingwords[randomIndex];
-        setpracticeWord(word);
-        localStorage.setItem("practice-word", JSON.stringify(word));
-
-        localStorage.setItem("playerInfoSolo", JSON.stringify(playerData));
+        localStorage.setItem('practice-word', JSON.stringify(word));
+        localStorage.setItem('playerInfoSolo', JSON.stringify(playerData));
         navigate(`/game/${generatedId}`);
     };
 
     const handleRoomClick = () => {
-        if (!name.trim()) {
-            toast.error('Please enter your name!');
-            return;
-        }
-
         const generatedId = generatePlayerId();
+        const playerData = buildPlayerData(generatedId);
+        if (!playerData) return;
 
-        const playerData = JSON.parse(localStorage.getItem("playerInfoSolo")) || {
-            id: generatedId,
-            name,
-            character: characterData[characterIndex],
-        };
-
-
-        localStorage.setItem("playerInfoMulti", JSON.stringify(playerData));
-        localStorage.setItem("playerInfoSolo", JSON.stringify(playerData));
+        localStorage.setItem('playerInfoMulti', JSON.stringify(playerData));
+        localStorage.setItem('playerInfoSolo', JSON.stringify(playerData));
         navigate('/room');
     };
 
-
-    const generatePlayerId = () => {
-        const newId = ((Math.floor(100000000 + Math.random() * 900000000)).toString());
-        setplayerId(newId);
-        return newId;
-    };
+    const features = [
+        { icon: '⏱️', label: '60 seconds', desc: 'Draw as fast as you can' },
+        { icon: '🤖', label: 'AI Judge', desc: 'qwen2.5vl scores every drawing' },
+        { icon: '🏆', label: 'Leaderboard', desc: 'Best drawing wins the round' },
+    ];
 
     return (
         <>
-            <div className="fixed inset-0 -z-10">
-                <Background />
-            </div>
+            <div className="fixed inset-0 -z-10"><Background /></div>
 
-            <div className="sticky top-0 left-0 w-auto h-auto flex justify-center z-5 py-4 sm:py-6 md:py-8 px-4 sm:px-6">
-                <div className="bg-black/40 flex flex-col gap-3 sm:gap-4 md:gap-5 items-center py-6 sm:py-8 md:py-10 text-white my-4 sm:my-6 md:my-10 w-full max-w-sm sm:max-w-md md:w-[30rem] h-auto rounded">
-                    <div className='flex justify-center mb-6 sm:mb-8 md:mb-10 group cursor-pointer' onClick={() => navigate('/')}>
-                        <Sketchaa />
-                        <Logo />
-                    </div>
-                    <div className='flex flex-col gap-4 sm:gap-5 md:gap-6 items-center w-full px-4'>
+            <div className="min-h-screen flex flex-col items-center justify-start px-4 py-10 pb-16">
+
+                {/* ── Logo ── */}
+                <div
+                    className="flex items-center gap-3 cursor-pointer mb-10 animate-fade-slide-up"
+                    onClick={() => navigate('/')}
+                    style={{ animationDelay: '0s' }}
+                >
+                    <Sketchaa />
+                    <Logo />
+                </div>
+
+                {/* ── Main card ── */}
+                <div
+                    className="card w-full max-w-sm p-8 flex flex-col items-center gap-6 animate-fade-slide-up"
+                    style={{ animationDelay: '0.08s' }}
+                >
+                    {/* Name */}
+                    <div className="w-full">
+                        <label className="block text-xs font-semibold text-stone-400 uppercase tracking-widest mb-2">
+                            Your Name
+                        </label>
                         <input
                             type="text"
-                            placeholder="Enter Your Name"
-                            className='bg-gray-700 w-full max-w-xs sm:max-w-sm md:w-70 px-2 sm:px-3 rounded py-1 sm:py-2 focus:outline-none text-sm sm:text-base'
-                            onChange={(e) => { setName(e.target.value) }}
+                            placeholder="Enter your name…"
+                            maxLength={20}
                             value={name}
+                            onChange={e => setName(e.target.value)}
+                            className="w-full bg-stone-50 border border-stone-200 text-stone-800 placeholder-stone-300 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-400 transition-all"
                         />
-                        <button className='opacity-80 mb-3 sm:mb-4 md:mb-5 text-xs sm:text-sm md:text-base' disabled>CHOOSE YOUR PLAYER ➡️</button>
+                        <p className="text-xs text-stone-400 mt-1.5">
+                            {name.trim() ? `Playing as "${name.trim()}"` : 'Will use saved name if empty'}
+                        </p>
                     </div>
-                    <div className='flex justify-center gap-3 sm:gap-4 md:gap-5 items-center'>
-                        <button onClick={handlePrev} className='hover:cursor-pointer text-lg sm:text-xl md:text-2xl'>◀</button>
-                        <img
-                            src={characterData[characterIndex]}
-                            alt="Character"
-                            className='aspect-square rounded-full object-cover border-2 border-white w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 hover:cursor-pointer'
-                        />
-                        <button onClick={handleNext} className='hover:cursor-pointer text-lg sm:text-xl md:text-2xl'>▶</button>
+
+                    {/* Divider */}
+                    <div className="w-full flex items-center gap-3">
+                        <div className="flex-1 h-px bg-stone-100" />
+                        <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">Character</span>
+                        <div className="flex-1 h-px bg-stone-100" />
                     </div>
-                    <div className='flex flex-col w-full mt-6 sm:mt-8 md:mt-10 items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-2'>
+
+                    {/* Character picker */}
+                    <div className="flex flex-col items-center gap-3 w-full">
+                        <div className="flex items-center gap-5">
+                            <button
+                                onClick={handlePrev}
+                                className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-800 transition-all"
+                            >
+                                <ChevronLeft size={17} />
+                            </button>
+
+                            <div className="relative">
+                                <img
+                                    src={characterData[characterIndex]}
+                                    alt="character"
+                                    className="w-24 h-24 rounded-full object-cover border-[3px] border-stone-800 shadow-md transition-all duration-200"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleNext}
+                                className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-800 transition-all"
+                            >
+                                <ChevronRight size={17} />
+                            </button>
+                        </div>
+
+                        {/* Dot indicators */}
+                        <div className="flex gap-1.5">
+                            {characterData.map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setCharacterIndex(i)}
+                                    className={`rounded-full transition-all duration-200 ${
+                                        i === characterIndex
+                                            ? 'w-4 h-2 bg-stone-800'
+                                            : 'w-2 h-2 bg-stone-300 hover:bg-stone-500'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="w-full flex flex-col gap-2.5 mt-1">
                         <button
-                            className='w-full sm:w-[85%] md:w-[80%] bg-[linear-gradient(to_right,_#ff512f,_#dd2476)] rounded-full py-2 sm:py-3 md:py-2 transition duration-300 hover:scale-[1.05] cursor-pointer text-sm sm:text-base'
-                            onClick={handlePlayClick}
+                            onClick={handleRoomClick}
+                            className="w-full btn btn-dark py-3.5 rounded-2xl text-sm font-semibold gap-2"
                         >
-                            Play
+                            <Users size={16} />
+                            Play with Friends
                         </button>
                         <button
-                            className='w-full sm:w-[85%] md:w-[80%] bg-[linear-gradient(to_right,_#36D1DC,_#5B86E5)] py-2 sm:py-3 md:py-2 rounded-full transition duration-300 hover:scale-[1.05] cursor-pointer text-sm sm:text-base'
-                            onClick={handleRoomClick}
+                            onClick={handlePlayClick}
+                            className="w-full btn btn-outline py-3.5 rounded-2xl text-sm font-semibold gap-2"
                         >
-                            Room
+                            <Pencil size={16} />
+                            Practice Solo
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex justify-center items-center w-full min-h-[100vh] z-10 relative px-2 sm:px-4 md:px-6 text-white">
-                <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl h-auto bg-gradient-to-br to-[#0f0f33]/90 via-[#1a1a3f]/90 from-black/90 justify-center items-center rounded-xl shadow-lg py-6 sm:py-8 md:py-10">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 w-full px-4 sm:px-6 md:px-8">
-                        <div className="bg-gray-700/80 rounded-lg p-4 sm:p-5 md:p-6 flex flex-col items-start shadow">
-                            <h2 className="text-lg sm:text-xl md:text-xl font-semibold mb-2 sm:mb-3 text-primary">About</h2>
-                            <p className="text-xs sm:text-sm md:text-sm leading-relaxed">
-                                Sketchaa is a fast-paced multiplayer drawing game where players draw a random word and then rate each other's artwork anonymously. After voting, scores are revealed and the leaderboard ranks the players. The winner is chosen entirely by fair player votes!
-                            </p>
+                {/* ── Feature pills ── */}
+                <div
+                    className="flex flex-wrap gap-2 justify-center mt-8 max-w-sm animate-fade-slide-up"
+                    style={{ animationDelay: '0.18s' }}
+                >
+                    {features.map(f => (
+                        <div
+                            key={f.label}
+                            className="flex items-center gap-2 bg-white/80 border border-stone-200 rounded-full px-4 py-2 shadow-sm"
+                        >
+                            <span className="text-sm">{f.icon}</span>
+                            <span className="text-xs font-semibold text-stone-700">{f.label}</span>
+                            <span className="text-xs text-stone-400 hidden sm:inline">— {f.desc}</span>
                         </div>
+                    ))}
+                </div>
 
-                        <div className="bg-gray-700/80 rounded-lg p-4 sm:p-5 md:p-6 flex flex-col items-start shadow">
-                            <h2 className="text-lg sm:text-xl md:text-xl font-semibold mb-2 sm:mb-3 text-primary">News</h2>
-                            <ul className="list-disc ml-4 sm:ml-5 text-xs sm:text-sm md:text-sm space-y-1 sm:space-y-2">
-                                <li>New drawing tools added</li>
-                                <li>Better color selection options</li>
-                                <li>Enhanced user interface</li>
-                            </ul>
+                {/* ── Info cards ── */}
+                <div
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 w-full max-w-3xl animate-fade-slide-up"
+                    style={{ animationDelay: '0.26s' }}
+                >
+                    <div className="card p-5">
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center mb-3">
+                            <span className="text-base">🎨</span>
                         </div>
-
-                        <div className="bg-gray-700/80 rounded-lg p-4 sm:p-5 md:p-6 flex flex-col items-start shadow sm:col-span-2 md:col-span-1">
-                            <h2 className="text-lg sm:text-xl md:text-xl font-semibold mb-2 sm:mb-3 text-primary">How to Play!</h2>
-                            <img src={aboutImg} alt="How to Play" className="w-full rounded mb-2 sm:mb-3 object-cover" />
-                            <p className="text-xs sm:text-sm md:text-sm">
-                                Get the word &rarr; Start drawing &rarr; Compete with friends!
-                            </p>
-                        </div>
+                        <h3 className="font-semibold text-stone-800 text-sm mb-1.5">About</h3>
+                        <p className="text-xs text-stone-500 leading-relaxed">
+                            A fast-paced multiplayer drawing game. Draw a word and let a local AI model score everyone's artwork.
+                        </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5 mt-4 sm:mt-6 md:mt-8 px-4">
-                        <button className="text-white px-3 sm:px-4 py-2 rounded hover:bg-gray-700 hover:cursor-pointer transition text-xs sm:text-sm md:text-base">Contact</button>
-                        <button className="text-white px-3 sm:px-4 py-2 rounded hover:bg-gray-700 cursor-pointer transition text-xs sm:text-sm md:text-base">Terms and Service</button>
-                        <button className="text-white px-3 sm:px-4 py-2 rounded hover:bg-gray-700 cursor-pointer transition text-xs sm:text-sm md:text-base">Privacy</button>
+                    <div className="card p-5">
+                        <div className="w-8 h-8 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center mb-3">
+                            <Bot size={15} className="text-violet-500" />
+                        </div>
+                        <h3 className="font-semibold text-stone-800 text-sm mb-1.5">AI Judge</h3>
+                        <ul className="text-xs text-stone-500 space-y-1.5">
+                            <li className="flex items-center gap-1.5">
+                                <Zap size={10} className="text-violet-400 flex-shrink-0" />
+                                Powered by qwen2.5vl:7b
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                                <Zap size={10} className="text-violet-400 flex-shrink-0" />
+                                Runs fully locally via Ollama
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                                <Zap size={10} className="text-violet-400 flex-shrink-0" />
+                                Scores + feedback per drawing
+                            </li>
+                        </ul>
                     </div>
+
+                    <div className="card p-5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-3">
+                            <span className="text-base">📖</span>
+                        </div>
+                        <h3 className="font-semibold text-stone-800 text-sm mb-1.5">How to Play</h3>
+                        {aboutImg && (
+                            <img src={aboutImg} alt="How to play" className="w-full rounded-lg mb-2 object-cover opacity-90" />
+                        )}
+                        <p className="text-xs text-stone-500">
+                            Get word → Draw → AI scores → Leaderboard reveals the winner!
+                        </p>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center gap-1 mt-10 animate-fade-slide-up" style={{ animationDelay: '0.32s' }}>
+                    {['Contact', 'Terms', 'Privacy'].map((label, i) => (
+                        <React.Fragment key={label}>
+                            <button className="text-stone-400 hover:text-stone-600 transition-colors text-xs px-3 py-1 rounded-lg hover:bg-stone-100">
+                                {label}
+                            </button>
+                            {i < 2 && <span className="text-stone-300 text-xs">·</span>}
+                        </React.Fragment>
+                    ))}
                 </div>
             </div>
         </>

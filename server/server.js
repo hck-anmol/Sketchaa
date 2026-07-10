@@ -14,19 +14,150 @@ const io = new Server(server, {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 5000;
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5vl:7b';
 
 const rooms = {};
 const roomDrawings = {};
-const roomScores = {};
 
 app.get('/', (req, res) => {
     res.send('Server is running...');
 });
 
+async function judgeDrawingWithOllama(imageDataUrl, word) {
+    try {
+        const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+
+        const prompt =
+            `You are judging a drawing game. The player was asked to draw: "${word}". ` +
+            `Look at the image and give it a score from 1 to 10 based on how well it represents the word, creativity, and effort. ` +
+            `Reply ONLY with valid JSON in this exact format, nothing else: {"score": <number 1-10>, "feedback": "<one short sentence>"}`;
+
+        const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: OLLAMA_MODEL,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt,
+                        images: [base64Image]
+                    }
+                ],
+                stream: false
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ollama responded with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        const rawContent = data.message?.content || '';
+
+        const jsonMatch = rawContent.match(/\{[\s\S]*?\}/);
+        if (!jsonMatch) throw new Error('No JSON found in Ollama response');
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        const score = Math.max(1, Math.min(10, parseInt(parsed.score) || 5));
+        const feedback = String(parsed.feedback || 'Interesting drawing!').substring(0, 200);
+
+        return { score, feedback };
+    } catch (err) {
+        console.error('Ollama judging error:', err.message);
+        const fallbackScore = Math.floor(Math.random() * 5) + 4;
+        return {
+            score: fallbackScore,
+            feedback: 'Could not reach AI judge – assigned a default score.',
+            aiError: true
+        };
+    }
+}
+
+async function judgeDrawingsWithOllama(roomCode) {
+    try {
+        if (!rooms[roomCode]) return;
+
+        const drawings = roomDrawings[roomCode] || {};
+        const players = rooms[roomCode].players;
+        const selectedWord = rooms[roomCode].selectedWord;
+
+        const submittedEntries = players
+            .map(p => ({ player: p, drawing: drawings[p.playerId] }))
+            .filter(e => e.drawing && e.drawing.image);
+
+        console.log(`[${roomCode}] Judging ${submittedEntries.length} drawing(s) with Ollama (${OLLAMA_MODEL})...`);
+
+        io.to(roomCode).emit('ai-judging-started', {
+            totalDrawings: players.length,
+            submittedDrawings: submittedEntries.length
+        });
+
+        const results = [];
+
+        for (const { player, drawing } of submittedEntries) {
+            console.log(`[${roomCode}] Judging drawing by ${player.playerName}...`);
+
+            const { score, feedback, aiError } = await judgeDrawingWithOllama(drawing.image, selectedWord);
+
+            const result = {
+                playerId: player.playerId,
+                playerName: player.playerName,
+                character: player.character,
+                image: drawing.image,
+                hasSubmitted: true,
+                aiScore: score,
+                aiFeedback: feedback,
+                aiError: aiError || false
+            };
+
+            results.push(result);
+
+            io.to(roomCode).emit('ai-judging-progress', { result });
+
+            console.log(`[${roomCode}] ${player.playerName}: score=${score}, feedback="${feedback}"`);
+        }
+
+        const submittedIds = new Set(submittedEntries.map(e => e.player.playerId));
+        for (const player of players) {
+            if (!submittedIds.has(player.playerId)) {
+                results.push({
+                    playerId: player.playerId,
+                    playerName: player.playerName,
+                    character: player.character,
+                    image: null,
+                    hasSubmitted: false,
+                    aiScore: 0,
+                    aiFeedback: 'No drawing submitted.',
+                    aiError: false
+                });
+            }
+        }
+
+        results.sort((a, b) => b.aiScore - a.aiScore);
+        results.forEach((r, i) => { r.rank = i + 1; });
+
+        io.to(roomCode).emit('game-results', {
+            roomCode,
+            selectedWord,
+            results,
+            totalPlayers: players.length,
+            submittedDrawings: submittedEntries.length
+        });
+
+        console.log(`[${roomCode}] AI judging complete. Results emitted.`);
+    } catch (err) {
+        console.error(`[${roomCode}] Error during AI judging:`, err);
+        io.to(roomCode).emit('room-error', 'AI judging failed. Please try again.');
+    }
+}
+
 io.on('connection', (socket) => {
+
     socket.on('create-room', ({ roomCode, hostPlayer, selectedWord }) => {
         try {
             if (rooms[roomCode]) {
@@ -50,7 +181,6 @@ io.on('connection', (socket) => {
             };
 
             roomDrawings[roomCode] = {};
-            roomScores[roomCode] = {};
 
             socket.join(roomCode);
             socket.emit('room-created', {
@@ -90,10 +220,6 @@ io.on('connection', (socket) => {
 
             if (!roomDrawings[roomCode]) {
                 roomDrawings[roomCode] = {};
-            }
-
-            if (!roomScores[roomCode]) {
-                roomScores[roomCode] = {};
             }
 
             socket.join(roomCode);
@@ -163,7 +289,6 @@ io.on('connection', (socket) => {
             }
 
             roomDrawings[roomCode] = {};
-            roomScores[roomCode] = {};
 
             rooms[roomCode].gameState.isStarted = true;
             rooms[roomCode].gameState.startTime = Date.now();
@@ -193,10 +318,13 @@ io.on('connection', (socket) => {
                     rooms[roomCode].gameState.isStarted = false;
 
                     io.to(roomCode).emit('request-final-drawing');
-
                     io.to(roomCode).emit('drawing-phase-ended');
-
                     io.to(roomCode).emit('game-state-updated', rooms[roomCode].gameState);
+
+                    // 2s buffer for clients to flush final drawings before judging
+                    setTimeout(() => {
+                        judgeDrawingsWithOllama(roomCode);
+                    }, 2000);
                 }
             }, 1000);
         } catch (err) {
@@ -227,130 +355,6 @@ io.on('connection', (socket) => {
         } catch (err) {
             console.error('Error submitting drawing:', err);
             socket.emit('room-error', 'Error submitting drawing');
-        }
-    });
-
-    socket.on('submit-score', ({ roomCode, scorerId, targetPlayerId, score }) => {
-        try {
-            if (!rooms[roomCode]) {
-                return socket.emit('score-error', 'Room does not exist');
-            }
-
-            if (!roomScores[roomCode]) {
-                roomScores[roomCode] = {};
-            }
-
-            if (scorerId === targetPlayerId) {
-                return socket.emit('score-error', 'Cannot score your own drawing');
-            }
-
-            if (score < 1 || score > 10) {
-                return socket.emit('score-error', 'Score must be between 1 and 10');
-            }
-
-            if (!roomScores[roomCode][targetPlayerId]) {
-                roomScores[roomCode][targetPlayerId] = [];
-            }
-
-            if (!rooms[roomCode].scoringTracker) {
-                rooms[roomCode].scoringTracker = {};
-            }
-
-            const scoringKey = `${scorerId}-${targetPlayerId}`;
-            if (rooms[roomCode].scoringTracker[scoringKey]) {
-                return socket.emit('score-error', 'You have already scored this drawing');
-            }
-
-            roomScores[roomCode][targetPlayerId].push(score);
-
-            rooms[roomCode].scoringTracker[scoringKey] = true;
-
-            const scores = roomScores[roomCode][targetPlayerId];
-            const totalScore = scores.reduce((sum, s) => sum + s, 0);
-            const totalVotes = scores.length;
-            const averageScore = totalVotes > 0 ? parseFloat((totalScore / totalVotes).toFixed(2)) : 0;
-
-            socket.emit('score-submitted', {
-                success: true,
-                targetPlayerId: targetPlayerId,
-                newTotalScore: totalScore,
-                newTotalVotes: totalVotes,
-                newAverageScore: averageScore
-            });
-
-            checkVotingComplete(roomCode);
-        } catch (err) {
-            console.error('Error submitting score:', err);
-            socket.emit('score-error', 'Error submitting score');
-        }
-    });
-
-    socket.on('get-scoring-history', ({ roomCode, playerId }) => {
-        try {
-            if (!rooms[roomCode]) {
-                return socket.emit('room-error', 'Room does not exist');
-            }
-
-            const scoredDrawings = [];
-            const scoringTracker = rooms[roomCode].scoringTracker || {};
-
-            for (const key in scoringTracker) {
-                if (scoringTracker[key]) {
-                    const [scorerId, targetPlayerId] = key.split('-');
-                    if (scorerId === playerId) {
-                        scoredDrawings.push(targetPlayerId);
-                    }
-                }
-            }
-
-            socket.emit('scoring-history', { scoredDrawings });
-        } catch (err) {
-            console.error('Error getting scoring history:', err);
-            socket.emit('room-error', 'Error getting scoring history');
-        }
-    });
-
-    socket.on('get-room-drawings', ({ roomCode }) => {
-        try {
-            if (!rooms[roomCode]) {
-                return socket.emit('room-error', 'Room does not exist');
-            }
-
-            const drawings = roomDrawings[roomCode] || {};
-            const players = rooms[roomCode].players;
-            const selectedWord = rooms[roomCode].selectedWord;
-            const scores = roomScores[roomCode] || {};
-
-            const results = players.map(player => {
-                const drawing = drawings[player.playerId];
-                const playerScores = scores[player.playerId] || [];
-                const totalScore = playerScores.reduce((sum, s) => sum + s, 0);
-                const totalVotes = playerScores.length;
-                const averageScore = totalVotes > 0 ? parseFloat((totalScore / totalVotes).toFixed(2)) : 0;
-
-                return {
-                    playerId: player.playerId,
-                    playerName: player.playerName,
-                    character: player.character,
-                    image: drawing ? drawing.image : null,
-                    hasSubmitted: !!drawing,
-                    totalScore,
-                    totalVotes,
-                    averageScore,
-                    scores: playerScores
-                };
-            });
-
-            io.to(roomCode).emit('room-drawings', {
-                roomCode,
-                results,
-                selectedWord,
-                totalPlayers: players.length,
-                submittedDrawings: Object.keys(drawings).length
-            });
-        } catch (err) {
-            console.error('Error getting room drawings:', err);
-            socket.emit('room-error', 'Error getting room drawings');
         }
     });
 
@@ -407,6 +411,40 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('get-room-drawings', ({ roomCode }) => {
+        try {
+            if (!rooms[roomCode]) {
+                return socket.emit('room-error', 'Room does not exist');
+            }
+
+            const drawings = roomDrawings[roomCode] || {};
+            const players = rooms[roomCode].players;
+            const selectedWord = rooms[roomCode].selectedWord;
+
+            const results = players.map(player => {
+                const drawing = drawings[player.playerId];
+                return {
+                    playerId: player.playerId,
+                    playerName: player.playerName,
+                    character: player.character,
+                    image: drawing ? drawing.image : null,
+                    hasSubmitted: !!drawing
+                };
+            });
+
+            socket.emit('room-drawings', {
+                roomCode,
+                results,
+                selectedWord,
+                totalPlayers: players.length,
+                submittedDrawings: Object.keys(drawings).length
+            });
+        } catch (err) {
+            console.error('Error getting room drawings:', err);
+            socket.emit('room-error', 'Error getting room drawings');
+        }
+    });
+
     socket.on('get-room-info', (roomCode) => {
         if (rooms[roomCode]) {
             socket.emit('room-info', rooms[roomCode]);
@@ -416,38 +454,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('request-game-results', ({ roomCode }) => {
-        processGameResults(roomCode);
-    });
-
-    socket.on('judge-timer-ended', ({ roomCode }) => {
-        if (rooms[roomCode] && roomScores[roomCode]) {
-            const scoreAverages = {};
-            for (const playerId in roomScores[roomCode]) {
-                const scores = roomScores[roomCode][playerId];
-                const average = scores.length > 0 ?
-                    parseFloat((scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(2)) : 0;
-                scoreAverages[playerId] = average;
-
-                const player = rooms[roomCode].players.find(p => p.playerId === playerId);
-            }
-
-            const sortedPlayers = Object.entries(scoreAverages)
-                .sort(([, a], [, b]) => b - a)
-                .map(([playerId, average], index) => {
-                    const player = rooms[roomCode].players.find(p => p.playerId === playerId);
-                    return {
-                        rank: index + 1,
-                        playerId,
-                        playerName: player?.playerName || 'Unknown',
-                        average
-                    };
-                });
-
+        if (rooms[roomCode] && !rooms[roomCode].gameState.isStarted) {
+            judgeDrawingsWithOllama(roomCode);
         }
     });
 
     socket.on('disconnect', () => {
-
         for (const roomCode in rooms) {
             const room = rooms[roomCode];
             const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
@@ -465,7 +477,6 @@ io.on('connection', (socket) => {
                 if (room.players.length === 0) {
                     delete rooms[roomCode];
                     delete roomDrawings[roomCode];
-                    delete roomScores[roomCode];
                     console.log(`Room ${roomCode} deleted as all players left.`);
                 }
 
@@ -475,121 +486,8 @@ io.on('connection', (socket) => {
     });
 });
 
-function checkVotingComplete(roomCode) {
-    try {
-        if (!rooms[roomCode] || !roomScores[roomCode]) return;
-
-        const playersInRoom = rooms[roomCode].players;
-        const drawingsData = roomDrawings[roomCode] || {};
-        const scoringTracker = rooms[roomCode].scoringTracker || {};
-
-        const playersWithSubmittedDrawings = playersInRoom.filter(p => drawingsData[p.playerId]);
-
-        let allPlayersFinishedVoting = true;
-
-        for (const player of playersInRoom) {
-            let drawingsScoredByThisPlayer = 0;
-
-            for (const targetPlayer of playersWithSubmittedDrawings) {
-                if (player.playerId === targetPlayer.playerId) {
-                    continue;
-                }
-
-                const scoringKey = `${player.playerId}-${targetPlayer.playerId}`;
-                if (scoringTracker[scoringKey]) {
-                    drawingsScoredByThisPlayer++;
-                }
-            }
-
-            const requiredScores = playersWithSubmittedDrawings.filter(
-                p => p.playerId !== player.playerId
-            ).length;
-
-            if (drawingsScoredByThisPlayer < requiredScores) {
-                allPlayersFinishedVoting = false;
-                break;
-            }
-        }
-
-        if (allPlayersFinishedVoting) {
-            io.to(roomCode).emit('voting-complete', {
-                message: 'All players have finished voting!',
-                canViewResults: true
-            });
-        }
-    } catch (err) {
-        console.error('Error checking voting completion:', err);
-    }
-}
-
-function processGameResults(roomCode) {
-    try {
-        if (!rooms[roomCode]) {
-            console.log(`Room ${roomCode} not found for processing results`);
-            return;
-        }
-
-        const drawings = roomDrawings[roomCode] || {};
-        const players = rooms[roomCode].players;
-        const selectedWord = rooms[roomCode].selectedWord;
-        const scores = roomScores[roomCode] || {};
-
-        const results = [];
-
-        players.forEach(player => {
-            const drawing = drawings[player.playerId];
-            const playerScores = scores[player.playerId] || [];
-            const totalScore = playerScores.reduce((sum, s) => sum + s, 0);
-            const totalVotes = playerScores.length;
-            const averageScore = totalVotes > 0 ? parseFloat((totalScore / totalVotes).toFixed(2)) : 0;
-
-            results.push({
-                playerId: player.playerId,
-                playerName: player.playerName,
-                character: player.character,
-                image: drawing ? drawing.image : null,
-                hasSubmitted: !!drawing,
-                totalScore,
-                totalVotes,
-                averageScore,
-                scores: playerScores
-            });
-        });
-
-        results.sort((a, b) => {
-            if (b.averageScore !== a.averageScore) {
-                return b.averageScore - a.averageScore;
-            }
-            if (b.totalVotes !== a.totalVotes) {
-                return b.totalVotes - a.totalVotes;
-            }
-
-            if (a.hasSubmitted && !b.hasSubmitted) {
-                return -1;
-            }
-            if (!a.hasSubmitted && b.hasSubmitted) {
-                return 1;
-            }
-
-            return 0;
-        });
-
-        results.forEach((result, index) => {
-            result.rank = index + 1;
-        });
-
-        io.to(roomCode).emit('game-results', {
-            roomCode,
-            selectedWord,
-            results,
-            totalPlayers: players.length,
-            submittedDrawings: Object.keys(drawings).length
-        });
-    } catch (err) {
-        console.error('Error processing game results:', err);
-    }
-}
-
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Ollama URL: ${OLLAMA_URL}`);
+    console.log(`Ollama Model: ${OLLAMA_MODEL}`);
 });
